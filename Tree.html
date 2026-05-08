@@ -1,0 +1,594 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pipeline Bio — Service Taxonomy</title>
+<style>
+  :root {
+    --navy: #0349A2;
+    --navy-dark: #022D66;
+    --cyan: #08A2C0;
+    --cyan-tint: #F0F8FA;
+    --off-white: #F8F7FB;
+    --ink: #0F172A;
+    --slate: #475569;
+    --slate-light: #94A3B8;
+    --hairline: rgba(3, 73, 162, 0.10);
+    --hairline-strong: rgba(3, 73, 162, 0.18);
+    --row-hover: rgba(8, 162, 192, 0.06);
+    --row-match: rgba(255, 237, 184, 0.45);
+  }
+
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0;
+    padding: 0;
+    background: var(--off-white);
+    color: var(--ink);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, "Liberation Sans", sans-serif;
+    font-feature-settings: "tnum" 1, "kern" 1;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* ========= STICKY HEADER ========= */
+  .header {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: var(--cyan-tint);
+    border-bottom: 1px solid var(--hairline-strong);
+  }
+  .header-inner {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 18px 28px 14px;
+  }
+  .wordmark-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+  .wordmark {
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 5px;
+    color: var(--cyan);
+    text-transform: uppercase;
+  }
+  .meta-label {
+    font-size: 12px;
+    font-weight: 500;
+    letter-spacing: 2px;
+    color: var(--slate);
+    text-transform: uppercase;
+  }
+  h1 {
+    margin: 6px 0 0;
+    font-size: 28px;
+    font-weight: 800;
+    color: var(--navy);
+    letter-spacing: -0.5px;
+  }
+  .subtitle {
+    margin: 4px 0 0;
+    color: var(--slate);
+    font-size: 14px;
+    line-height: 1.5;
+  }
+  .stat-strip {
+    display: flex;
+    gap: 0;
+    margin: 14px 0 0;
+    border: 1px solid var(--hairline);
+    border-radius: 6px;
+    background: rgba(255, 255, 255, 0.5);
+    overflow: hidden;
+    flex-wrap: wrap;
+  }
+  .stat-cell {
+    flex: 1 1 0;
+    min-width: 100px;
+    padding: 10px 14px;
+    border-right: 1px solid var(--hairline);
+  }
+  .stat-cell:last-child { border-right: 0; }
+  .stat-cell .v {
+    font-size: 22px;
+    font-weight: 800;
+    color: var(--navy);
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+  }
+  .stat-cell .l {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 1px;
+    color: var(--slate);
+    text-transform: uppercase;
+    margin-top: 4px;
+  }
+
+  /* ========= CONTROLS ========= */
+  .controls {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    padding: 10px 28px;
+    background: rgba(255, 255, 255, 0.65);
+    border-top: 1px solid var(--hairline);
+    flex-wrap: wrap;
+  }
+  .controls-inner {
+    max-width: 1100px;
+    margin: 0 auto;
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    flex-wrap: wrap;
+    width: 100%;
+  }
+  .search-box {
+    flex: 1 1 220px;
+    min-width: 200px;
+    padding: 8px 12px;
+    border: 1px solid var(--hairline-strong);
+    border-radius: 5px;
+    font-size: 14px;
+    color: var(--ink);
+    background: white;
+    font-family: inherit;
+    outline: none;
+    transition: border-color 0.15s, box-shadow 0.15s;
+  }
+  .search-box:focus {
+    border-color: var(--cyan);
+    box-shadow: 0 0 0 3px rgba(8, 162, 192, 0.15);
+  }
+  .btn {
+    padding: 8px 14px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--navy);
+    background: white;
+    border: 1px solid var(--hairline-strong);
+    border-radius: 5px;
+    cursor: pointer;
+    font-family: inherit;
+    transition: background 0.15s, border-color 0.15s;
+  }
+  .btn:hover {
+    background: var(--cyan-tint);
+    border-color: var(--cyan);
+  }
+  .result-count {
+    font-size: 12px;
+    color: var(--slate);
+    margin-left: auto;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* ========= TREE ========= */
+  .tree-container {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 14px 28px 80px;
+  }
+
+  .node {
+    display: block;
+  }
+
+  .row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 8px 6px 0;
+    border-bottom: 1px solid var(--hairline);
+    cursor: pointer;
+    transition: background 0.12s;
+    user-select: none;
+  }
+  .row:hover {
+    background: var(--row-hover);
+  }
+  .row.is-leaf {
+    cursor: default;
+  }
+  .row.is-match {
+    background: var(--row-match);
+  }
+
+  .toggle {
+    flex: 0 0 18px;
+    width: 18px;
+    height: 18px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--slate-light);
+    font-size: 10px;
+    transition: transform 0.15s;
+  }
+  .row.is-open > .row-content > .toggle {
+    transform: rotate(90deg);
+    color: var(--cyan);
+  }
+  .row.is-leaf .toggle {
+    visibility: hidden;
+  }
+
+  .row-content {
+    flex: 1 1 auto;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+  }
+
+  .l1-bar {
+    flex: 0 0 4px;
+    align-self: stretch;
+    border-radius: 2px;
+    margin-right: 4px;
+  }
+
+  .label {
+    flex: 1 1 auto;
+    font-size: 14px;
+    color: var(--ink);
+    line-height: 1.35;
+    overflow-wrap: break-word;
+    word-break: break-word;
+  }
+
+  .meta {
+    flex: 0 0 auto;
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    font-size: 11px;
+    color: var(--slate-light);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.3px;
+  }
+  .meta .pill {
+    padding: 1px 6px;
+    background: white;
+    border: 1px solid var(--hairline);
+    border-radius: 999px;
+    font-weight: 600;
+    color: var(--slate);
+  }
+  .meta .pill.svc {
+    color: var(--cyan);
+    border-color: rgba(8, 162, 192, 0.25);
+  }
+
+  /* Depth-specific styles */
+  .node[data-depth="1"] > .row {
+    padding-top: 12px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--hairline-strong);
+  }
+  .node[data-depth="1"] > .row .label {
+    font-size: 17px;
+    font-weight: 700;
+    color: var(--navy);
+    letter-spacing: -0.2px;
+  }
+  .node[data-depth="2"] > .row {
+    padding-top: 8px;
+    padding-bottom: 8px;
+  }
+  .node[data-depth="2"] > .row .label {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--navy);
+  }
+  .node[data-depth="3"] > .row .label {
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--ink);
+  }
+  .node[data-depth="4"] > .row .label {
+    font-size: 13px;
+    font-weight: 400;
+    color: var(--slate);
+  }
+
+  /* Indent children */
+  .children {
+    display: none;
+    margin-left: 24px;
+    border-left: 1px dashed var(--hairline);
+    padding-left: 12px;
+  }
+  .node.is-open > .children {
+    display: block;
+  }
+
+  /* Hidden by search filter */
+  .node.is-hidden {
+    display: none;
+  }
+
+  /* L1 jump navigation */
+  .l1-jumps {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 8px;
+  }
+  .jump-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 4px 10px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--navy);
+    background: white;
+    border: 1px solid var(--hairline);
+    border-radius: 999px;
+    cursor: pointer;
+    text-decoration: none;
+    transition: background 0.12s, border-color 0.12s;
+  }
+  .jump-chip:hover {
+    background: var(--cyan-tint);
+    border-color: var(--cyan);
+  }
+  .jump-chip .dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+  }
+
+  /* Footer */
+  .footer-note {
+    max-width: 1100px;
+    margin: 24px auto;
+    padding: 0 28px;
+    color: var(--slate);
+    font-size: 12px;
+    line-height: 1.5;
+    text-align: center;
+  }
+  .footer-note a {
+    color: var(--cyan);
+    text-decoration: none;
+  }
+  .footer-note a:hover {
+    text-decoration: underline;
+  }
+
+  /* Highlight matched text in search */
+  mark {
+    background: var(--row-match);
+    color: var(--ink);
+    padding: 0 2px;
+    border-radius: 2px;
+  }
+
+  /* Mobile */
+  @media (max-width: 640px) {
+    .header-inner { padding: 14px 16px 10px; }
+    .controls { padding: 10px 16px; }
+    .tree-container { padding: 14px 16px 60px; }
+    h1 { font-size: 22px; }
+    .stat-cell { padding: 8px 10px; min-width: 33%; }
+    .stat-cell .v { font-size: 18px; }
+    .children { margin-left: 14px; padding-left: 8px; }
+    .meta { font-size: 10px; }
+  }
+
+  /* Print */
+  @media print {
+    .header { position: static; }
+    .controls { display: none; }
+    .footer-note { display: none; }
+    .row { cursor: default; }
+    .toggle { display: none; }
+    .node:not(.is-open) > .children { display: block !important; }
+    .node.is-hidden { display: block !important; }
+  }
+</style>
+</head>
+<body>
+
+<header class="header">
+  <div class="header-inner">
+    <div class="wordmark-row">
+      <span class="wordmark">Pipeline Bio</span>
+    </div>
+    <h1>Australia's Scientific Service Taxonomy</h1>
+    <p class="subtitle">A structured map of the categories used to classify scientific service providers in the Pipeline Bio Directory. Click any row to expand.</p>
+
+    <div class="stat-strip" aria-label="Taxonomy summary">
+      <div class="stat-cell"><div class="v">13</div><div class="l">L1 Categories</div></div>
+      <div class="stat-cell"><div class="v">77</div><div class="l">L2</div></div>
+      <div class="stat-cell"><div class="v">433</div><div class="l">L3</div></div>
+      <div class="stat-cell"><div class="v">541</div><div class="l">L4</div></div>
+      <div class="stat-cell"><div class="v">1,064</div><div class="l">Total Nodes</div></div>
+    </div>
+
+    <div class="l1-jumps" id="l1Jumps" aria-label="Jump to a Layer 1 category"></div>
+  </div>
+
+  <div class="controls">
+    <div class="controls-inner">
+      <button class="btn" id="expandAll" type="button">Expand all</button>
+      <button class="btn" id="collapseAll" type="button">Collapse all</button>
+    </div>
+  </div>
+</header>
+
+<main class="tree-container">
+  <div id="tree" role="tree"></div>
+</main>
+
+<p class="footer-note">
+  This taxonomy is the structure underpinning the Pipeline Bio Directory of Service Providers. Service counts reflect listings as classified at the most specific level. To browse providers by category, visit the Platform.
+</p>
+
+<script>
+// ========= L1 COLOUR PALETTE =========
+// Muted, harmonising tints — one per L1. Used for the left bar and jump dots.
+const L1_COLORS = {
+  "Clinical":                                      "#3f77c4",
+  "Data, Statistics & Software":                   "#f2823a",
+  "Facilities, Equipment & Engineering":           "#7328b6",
+  "Financial & RDTI":                              "#f0c430",
+  "Legal & IP":                                    "#4daacf",
+  "Medical Device Development & Manufacturing":    "#dd3371",
+  "Organisational & Corporate":                    "#53c025",
+  "Pharmaceutical Manufacturing, CMC & Testing":   "#c32a94",
+  "Post-Approval, Market Access & Lifecycle":      "#fad435",
+  "Preclinical":                                   "#3438bd",
+  "Quality Systems, Compliance & Assurance":       "#a7d52a",
+  "Regulatory Affairs":                            "#ef3c42",
+  "Supply Chain & Logistics":                      "#52c67f",
+};
+
+// ========= TAXONOMY DATA =========
+// Compressed format: n=name, d=depth, s=services, c=descendant count, k=children
+const TREE_DATA = [{"n":"Clinical","d":1,"s":1196,"c":179,"k":[{"n":"Clinical Research Lab","d":2,"s":345,"c":60,"k":[{"n":"Biomarker & Diagnostic Testing","d":3,"s":67,"c":7,"k":[{"n":"Biomarker Analysis & Validation","d":4,"s":14,"c":0,"k":[]},{"n":"Coagulation Testing","d":4,"s":4,"c":0,"k":[]},{"n":"Flow Cytometry","d":4,"s":9,"c":0,"k":[]},{"n":"Imaging & Functional Testing","d":4,"s":7,"c":0,"k":[]},{"n":"Laboratory Testing","d":4,"s":6,"c":0,"k":[]},{"n":"Metabolic & Endocrine Testing","d":4,"s":5,"c":0,"k":[]},{"n":"Pathology Testing","d":4,"s":8,"c":0,"k":[]}]},{"n":"Clinical Bioanalytical Testing","d":3,"s":62,"c":9,"k":[{"n":"Anti-Drug Antibody Assays","d":4,"s":5,"c":0,"k":[]},{"n":"Bioanalytical Laboratory Services","d":4,"s":6,"c":0,"k":[]},{"n":"Biomarker & Molecular Assays","d":4,"s":8,"c":0,"k":[]},{"n":"Cell-Based & Toxicity Assays","d":4,"s":3,"c":0,"k":[]},{"n":"Clinical Pharmacology","d":4,"s":5,"c":0,"k":[]},{"n":"LC-MS/MS Bioanalysis","d":4,"s":5,"c":0,"k":[]},{"n":"Ligand Binding & Immunoassays","d":4,"s":8,"c":0,"k":[]},{"n":"Pharmacodynamics","d":4,"s":5,"c":0,"k":[]},{"n":"Pharmacokinetics","d":4,"s":10,"c":0,"k":[]}]},{"n":"Clinical Genomics & Genetic Testing","d":3,"s":62,"c":9,"k":[{"n":"Digital PCR","d":4,"s":4,"c":0,"k":[]},{"n":"Gene Expression Analysis","d":4,"s":3,"c":0,"k":[]},{"n":"Genotyping & Haplotyping","d":4,"s":7,"c":0,"k":[]},{"n":"Mutation & Variant Detection","d":4,"s":6,"c":0,"k":[]},{"n":"Next-Gen Sequencing","d":4,"s":4,"c":0,"k":[]},{"n":"Pharmacogenetics Testing","d":4,"s":7,"c":0,"k":[]},{"n":"Polymerase Chain Reaction","d":4,"s":9,"c":0,"k":[]},{"n":"Single-Cell & Spatial Profiling","d":4,"s":3,"c":0,"k":[]},{"n":"Targeted Panels","d":4,"s":4,"c":0,"k":[]}]},{"n":"Histopathology & Tissue Analysis","d":3,"s":20,"c":3,"k":[{"n":"Histopathology Testing","d":4,"s":4,"c":0,"k":[]},{"n":"Immunohistochemistry & Hybridisation","d":4,"s":5,"c":0,"k":[]},{"n":"Tissue Processing","d":4,"s":4,"c":0,"k":[]}]},{"n":"Immunogenicity & Immune Monitoring","d":3,"s":43,"c":8,"k":[{"n":"Allergy & Challenge Testing","d":4,"s":5,"c":0,"k":[]},{"n":"Cell Phenotyping & Enumeration","d":4,"s":9,"c":0,"k":[]},{"n":"Cytokine & Protein Assays","d":4,"s":5,"c":0,"k":[]},{"n":"ELISpot & FluoroSpot Assays","d":4,"s":4,"c":0,"k":[]},{"n":"Functional & Effector Cell Assays","d":4,"s":3,"c":0,"k":[]},{"n":"Immunoassays & ELISA","d":4,"s":5,"c":0,"k":[]},{"n":"Immunogenicity Testing & Development","d":4,"s":3,"c":0,"k":[]},{"n":"Specialised Immunology & Pathology Testing","d":4,"s":5,"c":0,"k":[]}]},{"n":"Medical Imaging & Reading","d":3,"s":20,"c":3,"k":[{"n":"Dosimetry","d":4,"s":3,"c":0,"k":[]},{"n":"Image Processing Tools","d":4,"s":3,"c":0,"k":[]},{"n":"Imaging Modalities","d":4,"s":5,"c":0,"k":[]}]},{"n":"Microbiology & Virology Testing","d":3,"s":23,"c":4,"k":[{"n":"Bacterial Identification","d":4,"s":3,"c":0,"k":[]},{"n":"Molecular Sequencing","d":4,"s":5,"c":0,"k":[]},{"n":"Neutralisation Assays","d":4,"s":3,"c":0,"k":[]},{"n":"Virology Assays","d":4,"s":3,"c":0,"k":[]}]},{"n":"Sample Processing & Banking","d":3,"s":47,"c":9,"k":[{"n":"Cryopreservation & Logistics","d":4,"s":3,"c":0,"k":[]},{"n":"DNA/RNA Extraction & Storage","d":4,"s":4,"c":0,"k":[]},{"n":"Mononuclear Cell Isolation","d":4,"s":4,"c":0,"k":[]},{"n":"PBMC Processing & Storage","d":4,"s":6,"c":0,"k":[]},{"n":"Sample Management & Tracking","d":4,"s":9,"c":0,"k":[]},{"n":"Sample Processing & Isolation","d":4,"s":7,"c":0,"k":[]},{"n":"Storage","d":4,"s":4,"c":0,"k":[]},{"n":"Tissue Biobanks","d":4,"s":3,"c":0,"k":[]},{"n":"Trial Sample Services","d":4,"s":3,"c":0,"k":[]}]}]},{"n":"Medical Writing & Comms","d":2,"s":185,"c":26,"k":[{"n":"Clinical Study Reports & Manuscripts","d":3,"s":54,"c":5,"k":[{"n":"Annual & Ethnic Sensitivity Reporting","d":4,"s":2,"c":0,"k":[]},{"n":"Clinical Evaluation & Validation Reports","d":4,"s":6,"c":0,"k":[]},{"n":"Manuscript & Publication Writing","d":4,"s":6,"c":0,"k":[]},{"n":"Report Prep & Review","d":4,"s":5,"c":0,"k":[]},{"n":"Study Report Writing","d":4,"s":21,"c":0,"k":[]}]},{"n":"Informed Consent & Patient Materials","d":3,"s":15,"c":3,"k":[{"n":"Consent Form Prep","d":4,"s":7,"c":0,"k":[]},{"n":"Consent Form Writing","d":4,"s":3,"c":0,"k":[]},{"n":"Patient Info Sheets","d":4,"s":3,"c":0,"k":[]}]},{"n":"Investigator Brochures & IMPDs","d":3,"s":28,"c":4,"k":[{"n":"Investigator Brochure Dev","d":4,"s":4,"c":0,"k":[]},{"n":"Investigator Brochure Prep","d":4,"s":6,"c":0,"k":[]},{"n":"Investigator Brochure Updates","d":4,"s":3,"c":0,"k":[]},{"n":"Investigator Brochure Writing","d":4,"s":6,"c":0,"k":[]}]},{"n":"Safety Narratives & Summaries","d":3,"s":43,"c":5,"k":[{"n":"Lay Language Summaries","d":4,"s":3,"c":0,"k":[]},{"n":"Manuscript & Publication Writing","d":4,"s":3,"c":0,"k":[]},{"n":"Medical Writing","d":4,"s":20,"c":0,"k":[]},{"n":"Regulatory Safety Reports","d":4,"s":4,"c":0,"k":[]},{"n":"Safety Narrative Writing","d":4,"s":6,"c":0,"k":[]}]},{"n":"Study Protocols & Amendments","d":3,"s":44,"c":4,"k":[{"n":"Amendments & Deviations","d":4,"s":7,"c":0,"k":[]},{"n":"Protocol Design & Writing","d":4,"s":10,"c":0,"k":[]},{"n":"Protocol Development","d":4,"s":10,"c":0,"k":[]},{"n":"Protocol Review & Consulting","d":4,"s":4,"c":0,"k":[]}]}]},{"n":"Trial Delivery","d":2,"s":413,"c":59,"k":[{"n":"Data Collection","d":3,"s":33,"c":4,"k":[{"n":"Case Report Form Design","d":4,"s":6,"c":0,"k":[]},{"n":"Electronic Data Capture","d":4,"s":8,"c":0,"k":[]},{"n":"Patient Reported Outcomes","d":4,"s":4,"c":0,"k":[]},{"n":"Wearable & Remote Monitoring","d":4,"s":4,"c":0,"k":[]}]},{"n":"Decentralised & Hybrid Operations","d":3,"s":25,"c":3,"k":[{"n":"Decentralised Enablement","d":4,"s":7,"c":0,"k":[]},{"n":"Direct-to-Patient","d":4,"s":3,"c":0,"k":[]},{"n":"In-Home Clinical","d":4,"s":4,"c":0,"k":[]}]},{"n":"Patient Recruitment & Retention","d":3,"s":36,"c":2,"k":[{"n":"Recruitment Strategy","d":4,"s":4,"c":0,"k":[]},{"n":"Trial Recruitment","d":4,"s":11,"c":0,"k":[]}]},{"n":"Phase 1 Delivery","d":3,"s":49,"c":7,"k":[{"n":"Bioavailability & Bioequivalence Studies","d":4,"s":4,"c":0,"k":[]},{"n":"Biosimilars & Biologics Studies","d":4,"s":3,"c":0,"k":[]},{"n":"Dose Escalation","d":4,"s":4,"c":0,"k":[]},{"n":"Early Phase Support","d":4,"s":5,"c":0,"k":[]},{"n":"First-in-Human","d":4,"s":13,"c":0,"k":[]},{"n":"Food Effect Studies","d":4,"s":4,"c":0,"k":[]},{"n":"Vaccine & Anti-Infective Studies","d":4,"s":3,"c":0,"k":[]}]},{"n":"Phase 2 Delivery","d":3,"s":7,"c":0,"k":[]},{"n":"Phase 3 Delivery","d":3,"s":5,"c":0,"k":[]},{"n":"Phase 4 Delivery","d":3,"s":12,"c":0,"k":[]},{"n":"Safety Monitoring","d":3,"s":29,"c":3,"k":[{"n":"Adverse Event Reporting","d":4,"s":4,"c":0,"k":[]},{"n":"Medical Monitoring","d":4,"s":11,"c":0,"k":[]},{"n":"Risk Management","d":4,"s":3,"c":0,"k":[]}]},{"n":"Site Close-Out","d":3,"s":6,"c":0,"k":[]},{"n":"Site Identification, Feasibility & Start-Up","d":3,"s":65,"c":8,"k":[{"n":"Investigator Selection","d":4,"s":4,"c":0,"k":[]},{"n":"Site Feasibility","d":4,"s":9,"c":0,"k":[]},{"n":"Site Initiation & Activation","d":4,"s":5,"c":0,"k":[]},{"n":"Site Management & Oversight","d":4,"s":6,"c":0,"k":[]},{"n":"Site Selection","d":4,"s":12,"c":0,"k":[]},{"n":"Study Feasibility","d":4,"s":8,"c":0,"k":[]},{"n":"Study Start-Up","d":4,"s":14,"c":0,"k":[]},{"n":"Trial Start-Up","d":4,"s":4,"c":0,"k":[]}]},{"n":"Site Monitoring & Oversight","d":3,"s":31,"c":3,"k":[{"n":"Investigator Site Oversight","d":4,"s":3,"c":0,"k":[]},{"n":"On-Site Monitoring","d":4,"s":17,"c":0,"k":[]},{"n":"Site Management","d":4,"s":6,"c":0,"k":[]}]},{"n":"Supply & Sourcing","d":3,"s":26,"c":4,"k":[{"n":"Biosimilar Sourcing","d":4,"s":3,"c":0,"k":[]},{"n":"Comparator & Ancillary Supplies","d":4,"s":4,"c":0,"k":[]},{"n":"Logistics & Integration","d":4,"s":3,"c":0,"k":[]},{"n":"Trial Supply Management","d":4,"s":3,"c":0,"k":[]}]},{"n":"Trial Documentation & TMF Management","d":3,"s":27,"c":4,"k":[{"n":"Documentation Support","d":4,"s":5,"c":0,"k":[]},{"n":"Electronic TMF","d":4,"s":5,"c":0,"k":[]},{"n":"Manual Development","d":4,"s":3,"c":0,"k":[]},{"n":"TMF Management","d":4,"s":8,"c":0,"k":[]}]},{"n":"Trial Lab Kit Design, Assembly & Distribution","d":3,"s":11,"c":0,"k":[]},{"n":"Trial Pharmacy","d":3,"s":8,"c":0,"k":[]},{"n":"Trials Training & Staffing","d":3,"s":33,"c":4,"k":[{"n":"Field Clinical Services","d":4,"s":4,"c":0,"k":[]},{"n":"Investigator & Study Team Training","d":4,"s":5,"c":0,"k":[]},{"n":"Site Staff Training","d":4,"s":7,"c":0,"k":[]},{"n":"Trial Support","d":4,"s":6,"c":0,"k":[]}]},{"n":"Vendor Selection & Management","d":3,"s":0,"c":0,"k":[]}]},{"n":"Trial Management","d":2,"s":253,"c":30,"k":[{"n":"Budgeting, Contracts & Financial","d":3,"s":8,"c":0,"k":[]},{"n":"Committees & Decision Support","d":3,"s":5,"c":0,"k":[]},{"n":"Development & Scientific Advisory","d":3,"s":85,"c":10,"k":[{"n":"Advisory & Review","d":4,"s":7,"c":0,"k":[]},{"n":"Clinical Consulting","d":4,"s":12,"c":0,"k":[]},{"n":"Oncology & Rare Disease","d":4,"s":2,"c":0,"k":[]},{"n":"Operations Support","d":4,"s":7,"c":0,"k":[]},{"n":"Paediatric & Specialised Indications","d":4,"s":4,"c":0,"k":[]},{"n":"Product Development","d":4,"s":9,"c":0,"k":[]},{"n":"Programme & Portfolio Management","d":4,"s":8,"c":0,"k":[]},{"n":"Strategy & Planning","d":4,"s":13,"c":0,"k":[]},{"n":"Technology & Systems","d":4,"s":3,"c":0,"k":[]},{"n":"Trial Management","d":4,"s":11,"c":0,"k":[]}]},{"n":"Risk-Based Monitoring & Oversight","d":3,"s":8,"c":0,"k":[]},{"n":"Trial Design & Study Architecture","d":3,"s":24,"c":0,"k":[]},{"n":"Trial Governance & Sponsor","d":3,"s":26,"c":4,"k":[{"n":"Adjudication & Endpoints","d":4,"s":3,"c":0,"k":[]},{"n":"Data & Safety Monitoring Committees","d":4,"s":7,"c":0,"k":[]},{"n":"Engagement","d":4,"s":5,"c":0,"k":[]},{"n":"Ethics & Governance","d":4,"s":2,"c":0,"k":[]}]},{"n":"Trial Project Management","d":3,"s":69,"c":5,"k":[{"n":"Execution & Administration","d":4,"s":12,"c":0,"k":[]},{"n":"Operations Management","d":4,"s":11,"c":0,"k":[]},{"n":"Planning & Support","d":4,"s":24,"c":0,"k":[]},{"n":"Project Oversight & Direction","d":4,"s":7,"c":0,"k":[]},{"n":"Site & Investigator Management","d":4,"s":6,"c":0,"k":[]}]},{"n":"Vendor & CRO Management ","d":3,"s":27,"c":3,"k":[{"n":"Vendor Management","d":4,"s":9,"c":0,"k":[]},{"n":"Vendor Oversight","d":4,"s":6,"c":0,"k":[]},{"n":"Vendor Selection","d":4,"s":3,"c":0,"k":[]}]}]}]},{"n":"Data, Statistics & Software","d":1,"s":334,"c":53,"k":[{"n":"Bioinformatics & Computational Biology","d":2,"s":24,"c":5,"k":[{"n":"Computational Modelling & Simulation","d":3,"s":5,"c":0,"k":[]},{"n":"Custom Bioinformatics Pipeline Dev","d":3,"s":1,"c":0,"k":[]},{"n":"Multi-Omics Data Integration & Analysis","d":3,"s":1,"c":0,"k":[]},{"n":"Sequencing Data Analysis","d":3,"s":15,"c":0,"k":[]},{"n":"Variant Calling & Annotation","d":3,"s":2,"c":0,"k":[]}]},{"n":"Biostatistics & Statistical Programming","d":2,"s":90,"c":13,"k":[{"n":"Clinical Statistical Analysis","d":3,"s":63,"c":7,"k":[{"n":"Clinical Trial Reporting","d":4,"s":8,"c":0,"k":[]},{"n":"Consulting & Methodology","d":4,"s":7,"c":0,"k":[]},{"n":"Data Integration & Simulation","d":4,"s":2,"c":0,"k":[]},{"n":"Meta & Post-Hoc Analysis","d":4,"s":4,"c":0,"k":[]},{"n":"Oncology Biostatistics","d":4,"s":7,"c":0,"k":[]},{"n":"Statistical Programming","d":4,"s":7,"c":0,"k":[]},{"n":"Study Statistician","d":4,"s":15,"c":0,"k":[]}]},{"n":"Non-Clinical Statistical Analysis","d":3,"s":7,"c":0,"k":[]},{"n":"PK/PD & Exposure-Response Modelling","d":3,"s":10,"c":0,"k":[]},{"n":"Statistical Programming (SAS, R, Python)","d":3,"s":4,"c":0,"k":[]},{"n":"Statistical Review & QC","d":3,"s":3,"c":0,"k":[]},{"n":"Table, Listing & Figure Generation","d":3,"s":3,"c":0,"k":[]}]},{"n":"Data Management & Infrastructure","d":2,"s":145,"c":17,"k":[{"n":"Clinical & Research Data Management","d":3,"s":100,"c":8,"k":[{"n":"Clinical Data Management","d":4,"s":43,"c":0,"k":[]},{"n":"Data Transfer & Migration","d":4,"s":7,"c":0,"k":[]},{"n":"Data Validation & Reconciliation","d":4,"s":5,"c":0,"k":[]},{"n":"Database Management","d":4,"s":10,"c":0,"k":[]},{"n":"Electronic Data Capture","d":4,"s":5,"c":0,"k":[]},{"n":"Laboratory & Genomic Data Management","d":4,"s":3,"c":0,"k":[]},{"n":"Medical Coding","d":4,"s":8,"c":0,"k":[]},{"n":"Project & Metadata Management","d":4,"s":3,"c":0,"k":[]}]},{"n":"Data Governance & Strategy","d":3,"s":12,"c":0,"k":[]},{"n":"Data Integration & Interoperability","d":3,"s":5,"c":0,"k":[]},{"n":"Data Quality Management & Cleaning","d":3,"s":9,"c":0,"k":[]},{"n":"Data Standards Implementation","d":3,"s":10,"c":0,"k":[]},{"n":"Database Design & Implementation","d":3,"s":9,"c":3,"k":[{"n":"Database Build","d":4,"s":2,"c":0,"k":[]},{"n":"Database Design","d":4,"s":4,"c":0,"k":[]},{"n":"eCRF Design & Management","d":4,"s":2,"c":0,"k":[]}]}]},{"n":"Software Development & Digital Platforms","d":2,"s":36,"c":6,"k":[{"n":"AI Systems Development & Implementation","d":3,"s":5,"c":0,"k":[]},{"n":"Custom Software Development","d":3,"s":3,"c":0,"k":[]},{"n":"Platform Integration & API Development","d":3,"s":6,"c":0,"k":[]},{"n":"Prototyping & MVP Development","d":3,"s":1,"c":0,"k":[]},{"n":"Scientific & Clinical Workflow Tools","d":3,"s":10,"c":0,"k":[]},{"n":"Software Maintenance & Lifecycle","d":3,"s":10,"c":0,"k":[]}]},{"n":"Statistical Planning & Modelling","d":2,"s":39,"c":7,"k":[{"n":"Adaptive & Complex Design","d":3,"s":3,"c":0,"k":[]},{"n":"Interim Analysis Planning","d":3,"s":4,"c":0,"k":[]},{"n":"Randomisation & Allocation Strategy","d":3,"s":12,"c":2,"k":[{"n":"Randomisation Methods","d":4,"s":4,"c":0,"k":[]},{"n":"Randomisation Schedule Development","d":4,"s":5,"c":0,"k":[]}]},{"n":"Sample Size & Power Calculations","d":3,"s":7,"c":0,"k":[]},{"n":"Statistical Analysis Plan Development","d":3,"s":13,"c":0,"k":[]}]}]},{"n":"Facilities, Equipment & Engineering","d":1,"s":173,"c":52,"k":[{"n":"Cleanroom & Contamination Control","d":2,"s":21,"c":6,"k":[{"n":"Cleanroom & Contamination Control","d":3,"s":3,"c":0,"k":[]},{"n":"Cleanroom Cleaning & Disinfection","d":3,"s":2,"c":0,"k":[]},{"n":"Cleanroom Operation & Maintenance","d":3,"s":0,"c":0,"k":[]},{"n":"Cleanroom Performance Testing & Certification","d":3,"s":8,"c":0,"k":[]},{"n":"Contamination Investigation & Root Cause Analysis","d":3,"s":0,"c":0,"k":[]},{"n":"Environmental Monitoring, Safety & Compliance","d":3,"s":8,"c":0,"k":[]}]},{"n":"Equipment Servicing, Calibration & Validation","d":2,"s":79,"c":19,"k":[{"n":"Contract & Asset Lifecycle Management","d":3,"s":4,"c":0,"k":[]},{"n":"Equipment Commissioning & Qualification","d":3,"s":34,"c":6,"k":[{"n":"Acceptance Testing","d":4,"s":3,"c":0,"k":[]},{"n":"Cabinet & Fume Hood Commissioning","d":4,"s":7,"c":0,"k":[]},{"n":"Equipment-Specific Qualification","d":4,"s":5,"c":0,"k":[]},{"n":"Integrity & Particle Testing","d":4,"s":4,"c":0,"k":[]},{"n":"Microbiological & Biological Testing","d":4,"s":5,"c":0,"k":[]},{"n":"Qualification Types","d":4,"s":4,"c":0,"k":[]}]},{"n":"Equipment Commissioning & Validation","d":3,"s":0,"c":0,"k":[]},{"n":"Equipment Repair & Fault Diagnosis","d":3,"s":0,"c":0,"k":[]},{"n":"Equipment Servicing, Calibration & Repair","d":3,"s":10,"c":0,"k":[]},{"n":"Instrument Calibration & Certification","d":3,"s":29,"c":6,"k":[{"n":"Liquid Handling Calibration","d":4,"s":3,"c":0,"k":[]},{"n":"Mass & Balance Calibration","d":4,"s":6,"c":0,"k":[]},{"n":"Microbiological & Safety Cabinet Testing","d":4,"s":4,"c":0,"k":[]},{"n":"Pressure & Humidity Calibration","d":4,"s":3,"c":0,"k":[]},{"n":"Specialised Instrument Calibration","d":4,"s":3,"c":0,"k":[]},{"n":"Temperature Calibration","d":4,"s":3,"c":0,"k":[]}]},{"n":"Preventive Maintenance","d":3,"s":2,"c":0,"k":[]}]},{"n":"Facilities Management & Technical","d":2,"s":7,"c":5,"k":[{"n":"Facilities Compliance Monitoring & Maintenance","d":3,"s":3,"c":0,"k":[]},{"n":"Facilities Transition & Vendor Management","d":3,"s":0,"c":0,"k":[]},{"n":"Integrated Facilities Management","d":3,"s":2,"c":0,"k":[]},{"n":"On-Site Technical Staffing","d":3,"s":2,"c":0,"k":[]},{"n":"Utilities & Critical Systems","d":3,"s":0,"c":0,"k":[]}]},{"n":"Facility Operations, Engineering & Validation","d":2,"s":62,"c":12,"k":[{"n":"Asset Management & Maintenance","d":3,"s":5,"c":0,"k":[]},{"n":"Engineering Support & Troubleshooting","d":3,"s":17,"c":2,"k":[{"n":"Assembly & Manufacturing","d":4,"s":5,"c":0,"k":[]},{"n":"Engineering Design","d":4,"s":4,"c":0,"k":[]}]},{"n":"Facility Commissioning & Validation","d":3,"s":12,"c":2,"k":[{"n":"Commissioning Execution","d":4,"s":3,"c":0,"k":[]},{"n":"Pressurisation Testing","d":4,"s":3,"c":0,"k":[]}]},{"n":"Facility Concept & Design","d":3,"s":10,"c":0,"k":[]},{"n":"Facility Upgrades & Refurbishment","d":3,"s":1,"c":0,"k":[]},{"n":"Planned & Reactive Maintenance","d":3,"s":0,"c":0,"k":[]},{"n":"Robotics Systems Engineering & Lifecycle","d":3,"s":15,"c":0,"k":[]},{"n":"Utilities Operation (HVAC, Gases, Water)","d":3,"s":2,"c":0,"k":[]}]},{"n":"Waste Management & Biosafety","d":2,"s":4,"c":5,"k":[{"n":"Biological & Chemical Waste Disposal","d":3,"s":1,"c":0,"k":[]},{"n":"Biosafety Risk Assessment & Containment","d":3,"s":3,"c":0,"k":[]},{"n":"Hazardous Material Handling & Disposal","d":3,"s":0,"c":0,"k":[]},{"n":"Laboratory Decontamination","d":3,"s":0,"c":0,"k":[]},{"n":"Spill Response & Emergency Decon","d":3,"s":0,"c":0,"k":[]}]}]},{"n":"Financial & RDTI","d":1,"s":263,"c":45,"k":[{"n":"Financial Ops Outsourcing","d":2,"s":50,"c":12,"k":[{"n":"Accounting & Bookkeeping","d":3,"s":21,"c":4,"k":[{"n":"Bookkeeping","d":4,"s":4,"c":0,"k":[]},{"n":"Financial Reporting","d":4,"s":3,"c":0,"k":[]},{"n":"Outsourced Accounting","d":4,"s":5,"c":0,"k":[]},{"n":"Tax & Compliance","d":4,"s":3,"c":0,"k":[]}]},{"n":"Outsourced CFO","d":3,"s":12,"c":2,"k":[{"n":"CFO Advisory","d":4,"s":3,"c":0,"k":[]},{"n":"Virtual CFO","d":4,"s":5,"c":0,"k":[]}]},{"n":"Planning, Budgeting & Forecasting","d":3,"s":16,"c":3,"k":[{"n":"Budgeting & Forecasting","d":4,"s":3,"c":0,"k":[]},{"n":"Financial Modelling","d":4,"s":4,"c":0,"k":[]},{"n":"Financial Report Prep","d":4,"s":3,"c":0,"k":[]}]}]},{"n":"Funding Support","d":2,"s":50,"c":6,"k":[{"n":"Dilutive Funding & Investment","d":3,"s":17,"c":0,"k":[]},{"n":"Non-Dilutive Funding","d":3,"s":29,"c":3,"k":[{"n":"Grant Application","d":4,"s":7,"c":0,"k":[]},{"n":"Grant Identification","d":4,"s":3,"c":0,"k":[]},{"n":"Specialised Grants","d":4,"s":8,"c":0,"k":[]}]},{"n":"Valuation & Asset Valuation","d":3,"s":4,"c":0,"k":[]}]},{"n":"Insurance & Brokering","d":2,"s":39,"c":5,"k":[{"n":"Clinical Trial Insurance","d":3,"s":2,"c":0,"k":[]},{"n":"D&O Insurance","d":3,"s":3,"c":0,"k":[]},{"n":"Product Liability & Indemnity Insurance","d":3,"s":20,"c":0,"k":[]},{"n":"Property, Equipment & Asset Insurance","d":3,"s":5,"c":0,"k":[]},{"n":"Risk Assessment & Policy Management","d":3,"s":9,"c":0,"k":[]}]},{"n":"Research & Development Tax Incentive","d":2,"s":37,"c":3,"k":[{"n":"RDTI Eligibility Assessment & Advisory","d":3,"s":22,"c":0,"k":[]},{"n":"RDTI Financial Modelling, Claims & Audit","d":3,"s":6,"c":0,"k":[]},{"n":"RDTI Technical Documentation & Application","d":3,"s":9,"c":0,"k":[]}]},{"n":"Tax Advisory & Compliance","d":2,"s":87,"c":14,"k":[{"n":"Corporate & R&D Tax Advisory","d":3,"s":20,"c":2,"k":[{"n":"R&D Tax Advisory","d":4,"s":5,"c":0,"k":[]},{"n":"Tax Legal","d":4,"s":3,"c":0,"k":[]}]},{"n":"Financial Reporting","d":3,"s":6,"c":0,"k":[]},{"n":"Indirect Tax (GST/VAT) Compliance","d":3,"s":8,"c":0,"k":[]},{"n":"International Tax & Transfer Pricing","d":3,"s":7,"c":0,"k":[]},{"n":"Tax Compliance, Filings & Lodgements","d":3,"s":34,"c":6,"k":[{"n":"Business Activity Statements","d":4,"s":3,"c":0,"k":[]},{"n":"Financial Reporting","d":4,"s":5,"c":0,"k":[]},{"n":"Fringe Benefits Tax","d":4,"s":3,"c":0,"k":[]},{"n":"Payroll Tax","d":4,"s":7,"c":0,"k":[]},{"n":"Superannuation","d":4,"s":6,"c":0,"k":[]},{"n":"Tax Compliance","d":4,"s":3,"c":0,"k":[]}]},{"n":"Tax Risk Assessment & Audit","d":3,"s":12,"c":0,"k":[]}]}]},{"n":"Legal & IP","d":1,"s":501,"c":87,"k":[{"n":"Commercial, Contract & Licensing","d":2,"s":65,"c":11,"k":[{"n":"Confidentiality & Data Sharing","d":3,"s":5,"c":0,"k":[]},{"n":"Licensing & Tech Transfer Agreements","d":3,"s":25,"c":3,"k":[{"n":"Commercialisation","d":4,"s":6,"c":0,"k":[]},{"n":"IP Licensing & Assignments","d":4,"s":6,"c":0,"k":[]},{"n":"Tech Transfer Agreements","d":4,"s":3,"c":0,"k":[]}]},{"n":"Master & Framework Agreements","d":3,"s":3,"c":0,"k":[]},{"n":"Negotiation & Contract Management","d":3,"s":22,"c":3,"k":[{"n":"Commercial & Licensing Agreements","d":4,"s":7,"c":0,"k":[]},{"n":"Contract Review & Interpretation","d":4,"s":2,"c":0,"k":[]},{"n":"Employment & Contractor Agreements","d":4,"s":3,"c":0,"k":[]}]},{"n":"Research Collaboration & Agreements","d":3,"s":9,"c":0,"k":[]}]},{"n":"Corporate Law, Governance & Transactions","d":2,"s":118,"c":18,"k":[{"n":"Company Formation & Structuring","d":3,"s":24,"c":3,"k":[{"n":"Company Incorporation","d":4,"s":8,"c":0,"k":[]},{"n":"Company Secretary","d":4,"s":3,"c":0,"k":[]},{"n":"Employee Share Schemes","d":4,"s":3,"c":0,"k":[]}]},{"n":"Corporate Transactions & Due Diligence","d":3,"s":34,"c":4,"k":[{"n":"Capital Raising","d":4,"s":3,"c":0,"k":[]},{"n":"Due Diligence","d":4,"s":12,"c":0,"k":[]},{"n":"Intellectual Property","d":4,"s":4,"c":0,"k":[]},{"n":"Legal Advisory","d":4,"s":3,"c":0,"k":[]}]},{"n":"Governance & Compliance Advisory","d":3,"s":36,"c":6,"k":[{"n":"ASX Compliance","d":4,"s":6,"c":0,"k":[]},{"n":"Company Secretarial","d":4,"s":6,"c":0,"k":[]},{"n":"Competition & Consumer Law","d":4,"s":4,"c":0,"k":[]},{"n":"ESG & Sustainability Advisory","d":4,"s":3,"c":0,"k":[]},{"n":"Governance Advisory","d":4,"s":8,"c":0,"k":[]},{"n":"Legal Advisory","d":4,"s":3,"c":0,"k":[]}]},{"n":"Mergers, Acquisitions & Divestments","d":3,"s":19,"c":0,"k":[]},{"n":"Shareholder, Founder & Investment Agreements","d":3,"s":5,"c":0,"k":[]}]},{"n":"Data Protection, Privacy & Cyber Compliance","d":2,"s":27,"c":5,"k":[{"n":"Cross-Border Data Transfer & Localisation","d":3,"s":1,"c":0,"k":[]},{"n":"Cybersecurity Legal Risk & Compliance Advisory","d":3,"s":9,"c":0,"k":[]},{"n":"Incident Response & Regulatory Notification","d":3,"s":2,"c":0,"k":[]},{"n":"Privacy Compliance & Policy Development","d":3,"s":12,"c":0,"k":[]},{"n":"Trade Secrets & Confidential Info Protection","d":3,"s":3,"c":0,"k":[]}]},{"n":"IP Strategy, Management & Protection","d":2,"s":218,"c":28,"k":[{"n":"Copyright IP Strategy, Management & Protection","d":3,"s":13,"c":0,"k":[]},{"n":"Designs IP Strategy, Management & Protection","d":3,"s":42,"c":6,"k":[{"n":"Design Application Prosecution","d":4,"s":4,"c":0,"k":[]},{"n":"Design Enforcement & Protection","d":4,"s":3,"c":0,"k":[]},{"n":"Design Filing & Registration","d":4,"s":8,"c":0,"k":[]},{"n":"Design Portfolio Management","d":4,"s":4,"c":0,"k":[]},{"n":"Design Searches & Watches","d":4,"s":5,"c":0,"k":[]},{"n":"IP Strategy & Governance","d":4,"s":4,"c":0,"k":[]}]},{"n":"Patent IP Strategy, Management & Protection","d":3,"s":92,"c":10,"k":[{"n":"IP Audits & Due Diligence","d":4,"s":3,"c":0,"k":[]},{"n":"IP Commercialisation & Asset Structuring","d":4,"s":3,"c":0,"k":[]},{"n":"IP Legal Advice & Protection","d":4,"s":5,"c":0,"k":[]},{"n":"International Patent Protection","d":4,"s":5,"c":0,"k":[]},{"n":"Patent Drafting & Prosecution","d":4,"s":13,"c":0,"k":[]},{"n":"Patent Portfolio Management","d":4,"s":6,"c":0,"k":[]},{"n":"Patent Renewals & Maintenance","d":4,"s":6,"c":0,"k":[]},{"n":"Patent Searching & Clearance","d":4,"s":20,"c":0,"k":[]},{"n":"Patent Strategy & Advisory","d":4,"s":12,"c":0,"k":[]},{"n":"Plant Breeders' Rights & Variety Protection","d":4,"s":5,"c":0,"k":[]}]},{"n":"Trademark IP Strategy, Management & Protection","d":3,"s":65,"c":8,"k":[{"n":"Anti-Counterfeiting & Customs Protection","d":4,"s":4,"c":0,"k":[]},{"n":"Clearance & Searching","d":4,"s":9,"c":0,"k":[]},{"n":"Domain Names","d":4,"s":4,"c":0,"k":[]},{"n":"Filing, Prosecution & Registration","d":4,"s":11,"c":0,"k":[]},{"n":"Oppositions & Removal Applications","d":4,"s":3,"c":0,"k":[]},{"n":"Portfolio Management & Renewals","d":4,"s":6,"c":0,"k":[]},{"n":"Strategy & Pre-Filing Advice","d":4,"s":6,"c":0,"k":[]},{"n":"Watching & Monitoring","d":4,"s":5,"c":0,"k":[]}]}]},{"n":"Legal Training & Mentoring","d":2,"s":4,"c":5,"k":[{"n":"Contracting & Commercial Risk Training","d":3,"s":1,"c":0,"k":[]},{"n":"Founder & Executive Mentoring","d":3,"s":0,"c":0,"k":[]},{"n":"IP Awareness & Protection","d":3,"s":3,"c":0,"k":[]},{"n":"Legal & Regulatory Training","d":3,"s":0,"c":0,"k":[]},{"n":"Regulatory Compliance Education","d":3,"s":0,"c":0,"k":[]}]},{"n":"Litigation & Dispute Resolution","d":2,"s":69,"c":14,"k":[{"n":"Copyright Litigation & Dispute Resolution","d":3,"s":6,"c":0,"k":[]},{"n":"Designs Litigation & Dispute Resolution","d":3,"s":6,"c":0,"k":[]},{"n":"Patent Litigation & Dispute Resolution","d":3,"s":39,"c":6,"k":[{"n":"Dispute Resolution & Appeals","d":4,"s":9,"c":0,"k":[]},{"n":"IP Litigation & Disputes","d":4,"s":4,"c":0,"k":[]},{"n":"Litigation Support","d":4,"s":4,"c":0,"k":[]},{"n":"Patent Infringement & Enforcement","d":4,"s":4,"c":0,"k":[]},{"n":"Patent Litigation","d":4,"s":5,"c":0,"k":[]},{"n":"Patent Opposition","d":4,"s":7,"c":0,"k":[]}]},{"n":"Trademark Litigation & Dispute Resolution","d":3,"s":16,"c":4,"k":[{"n":"Domain Name Disputes","d":4,"s":3,"c":0,"k":[]},{"n":"Litigation & Court Representation","d":4,"s":3,"c":0,"k":[]},{"n":"Trademark Infringement","d":4,"s":3,"c":0,"k":[]},{"n":"Trademark Opposition","d":4,"s":5,"c":0,"k":[]}]}]}]},{"n":"Medical Device Development & Manufacturing","d":1,"s":245,"c":58,"k":[{"n":"Device Design & Engineering","d":2,"s":50,"c":6,"k":[{"n":"Design For Manufacturability (DFM)","d":3,"s":8,"c":0,"k":[]},{"n":"Human Factors & Usability Engineering","d":3,"s":16,"c":0,"k":[]},{"n":"Mechanical & Industrial Design","d":3,"s":11,"c":0,"k":[]},{"n":"Risk Management (ISO 14971)","d":3,"s":4,"c":0,"k":[]},{"n":"System Architecture & Design Controls","d":3,"s":2,"c":0,"k":[]},{"n":"User Needs & Requirements Definition","d":3,"s":4,"c":0,"k":[]}]},{"n":"Device Manufacturing & Assembly","d":2,"s":29,"c":5,"k":[{"n":"In-Process Manufacturing Support","d":3,"s":13,"c":0,"k":[]},{"n":"Manufacturing Process Optimisation","d":3,"s":3,"c":0,"k":[]},{"n":"Pilot & Scale-Up Manufacturing","d":3,"s":4,"c":0,"k":[]},{"n":"Precision Assembly & Integration","d":3,"s":9,"c":0,"k":[]},{"n":"Supplier & Component Sourcing","d":3,"s":0,"c":0,"k":[]}]},{"n":"Device Technical Documentation & Regulatory","d":2,"s":16,"c":6,"k":[{"n":"Change Control & Documentation Maintenance","d":3,"s":0,"c":0,"k":[]},{"n":"Design History File (DHF) Preparation","d":3,"s":0,"c":0,"k":[]},{"n":"Regulatory Responses & Clarifications","d":3,"s":6,"c":0,"k":[]},{"n":"Risk Management Documentation","d":3,"s":5,"c":0,"k":[]},{"n":"Technical File & Design Dossier Authoring","d":3,"s":1,"c":0,"k":[]},{"n":"Usability Engineering File Preparation","d":3,"s":0,"c":0,"k":[]}]},{"n":"Electronic & Embedded Systems Engineering","d":2,"s":41,"c":6,"k":[{"n":"Connectivity & Wireless Integration","d":3,"s":4,"c":0,"k":[]},{"n":"Cybersecurity Design for Connected Devices","d":3,"s":8,"c":0,"k":[]},{"n":"Electronic Hardware Design","d":3,"s":12,"c":0,"k":[]},{"n":"Embedded Firmware & Software Development","d":3,"s":11,"c":0,"k":[]},{"n":"Power Management & Battery Systems","d":3,"s":1,"c":0,"k":[]},{"n":"Sensor Integration & Signal Processing","d":3,"s":5,"c":0,"k":[]}]},{"n":"Microfluidics & Diagnostic Cartridge Development","d":2,"s":22,"c":6,"k":[{"n":"Analytical Performance Optimisation","d":3,"s":13,"c":0,"k":[]},{"n":"Cartridge Architecture & Layout Design","d":3,"s":2,"c":0,"k":[]},{"n":"Cartridge Scale-Up & Manufacturability","d":3,"s":1,"c":0,"k":[]},{"n":"Fluid Control & Assay Integration","d":3,"s":3,"c":0,"k":[]},{"n":"Microfluidic System Design","d":3,"s":2,"c":0,"k":[]},{"n":"Prototype Fabrication & Micro-Moulding","d":3,"s":1,"c":0,"k":[]}]},{"n":"Packaging, Sterilisation & Shelf-Life Validation","d":2,"s":11,"c":5,"k":[{"n":"Packaging Integrity & Transport Testing","d":3,"s":1,"c":0,"k":[]},{"n":"Packaging System Design & Testing","d":3,"s":3,"c":0,"k":[]},{"n":"Shelf-Life & Ageing Studies","d":3,"s":0,"c":0,"k":[]},{"n":"Sterilisation Method Development & Validation","d":3,"s":1,"c":0,"k":[]},{"n":"Sterility Assurance & Bioburden Testing","d":3,"s":6,"c":0,"k":[]}]},{"n":"Prototyping & Product Development","d":2,"s":52,"c":10,"k":[{"n":"Alpha & Beta Prototype Builds","d":3,"s":1,"c":0,"k":[]},{"n":"In Vitro Diagnostic Assay Development","d":3,"s":18,"c":2,"k":[{"n":"Lateral Flow Assay Development","d":4,"s":3,"c":0,"k":[]},{"n":"Manufacturing & Scale Up","d":4,"s":3,"c":0,"k":[]}]},{"n":"Proof-Of-Concept Development","d":3,"s":17,"c":3,"k":[{"n":"Concept Development","d":4,"s":3,"c":0,"k":[]},{"n":"Proof-of-Concept Studies","d":4,"s":4,"c":0,"k":[]},{"n":"Prototyping","d":4,"s":3,"c":0,"k":[]}]},{"n":"Prototype Testing & Refinement","d":3,"s":5,"c":0,"k":[]},{"n":"Rapid Prototyping & Iteration","d":3,"s":8,"c":0,"k":[]}]},{"n":"Verification, Validation & Testing","d":2,"s":24,"c":6,"k":[{"n":"Design Validation & User Testing","d":3,"s":2,"c":0,"k":[]},{"n":"Design Verification Testing","d":3,"s":5,"c":0,"k":[]},{"n":"Electrical Safety & EMC Testing","d":3,"s":7,"c":0,"k":[]},{"n":"Environmental & Reliability Testing","d":3,"s":1,"c":0,"k":[]},{"n":"Performance & Functional Testing","d":3,"s":2,"c":0,"k":[]},{"n":"Software Verification & Validation","d":3,"s":7,"c":0,"k":[]}]}]},{"n":"Organisational & Corporate","d":1,"s":321,"c":53,"k":[{"n":"Corporate Management & Strategy","d":2,"s":153,"c":22,"k":[{"n":"Board Advisory","d":3,"s":17,"c":0,"k":[]},{"n":"Business & Commercial Strategy","d":3,"s":73,"c":10,"k":[{"n":"Business Growth & Development","d":4,"s":10,"c":0,"k":[]},{"n":"Business Model","d":4,"s":7,"c":0,"k":[]},{"n":"Corporate Strategy","d":4,"s":16,"c":0,"k":[]},{"n":"Event Planning","d":4,"s":4,"c":0,"k":[]},{"n":"Financial & Corporate Advisory","d":4,"s":8,"c":0,"k":[]},{"n":"Management Consulting","d":4,"s":7,"c":0,"k":[]},{"n":"Organisational Change & Leadership","d":4,"s":3,"c":0,"k":[]},{"n":"Project & Process Management","d":4,"s":4,"c":0,"k":[]},{"n":"Specialised Strategy","d":4,"s":4,"c":0,"k":[]},{"n":"Sustainability & ESG","d":4,"s":3,"c":0,"k":[]}]},{"n":"Corporate Regulatory Reporting","d":3,"s":3,"c":0,"k":[]},{"n":"Executive Support","d":3,"s":23,"c":3,"k":[{"n":"Career Coaching & Development","d":4,"s":3,"c":0,"k":[]},{"n":"Executive Search & Recruitment","d":4,"s":5,"c":0,"k":[]},{"n":"Project Management","d":4,"s":3,"c":0,"k":[]}]},{"n":"Insolvency, Restructuring & Turnaround","d":3,"s":5,"c":0,"k":[]},{"n":"Policy & Stakeholder Management","d":3,"s":18,"c":2,"k":[{"n":"Public Policy Development","d":4,"s":3,"c":0,"k":[]},{"n":"Stakeholder Engagement","d":4,"s":6,"c":0,"k":[]}]},{"n":"Resident Director & Entity Set-Up","d":3,"s":14,"c":0,"k":[]}]},{"n":"Human Resources","d":2,"s":100,"c":16,"k":[{"n":"HR & People Ops","d":3,"s":8,"c":0,"k":[]},{"n":"Performance & Development","d":3,"s":22,"c":6,"k":[{"n":"Career Coaching & Counselling","d":4,"s":5,"c":0,"k":[]},{"n":"Organisational Development","d":4,"s":1,"c":0,"k":[]},{"n":"Performance Improvement","d":4,"s":2,"c":0,"k":[]},{"n":"Remuneration & Salary","d":4,"s":5,"c":0,"k":[]},{"n":"Team & Leadership Development","d":4,"s":1,"c":0,"k":[]},{"n":"Training & Implementation","d":4,"s":3,"c":0,"k":[]}]},{"n":"Recruitment","d":3,"s":59,"c":6,"k":[{"n":"Executive Search by Role","d":4,"s":18,"c":0,"k":[]},{"n":"Functional Area Recruitment","d":4,"s":9,"c":0,"k":[]},{"n":"Industry-Specific Recruitment","d":4,"s":7,"c":0,"k":[]},{"n":"Leadership & Board Search","d":4,"s":11,"c":0,"k":[]},{"n":"Permanent & Temporary Staffing","d":4,"s":4,"c":0,"k":[]},{"n":"Recruitment Support","d":4,"s":4,"c":0,"k":[]}]},{"n":"Workplace Compliance & HR Advisory","d":3,"s":11,"c":0,"k":[]}]},{"n":"Information Technology","d":2,"s":35,"c":5,"k":[{"n":"Digital Transformation & Automation","d":3,"s":23,"c":2,"k":[{"n":"Automation","d":4,"s":3,"c":0,"k":[]},{"n":"Digital Transformation Consulting","d":4,"s":6,"c":0,"k":[]}]},{"n":"Disaster Recovery & Business Continuity","d":3,"s":3,"c":0,"k":[]},{"n":"IT Infrastructure, Cloud & Cybersecurity","d":3,"s":9,"c":0,"k":[]}]},{"n":"Marketing & Sales","d":2,"s":33,"c":6,"k":[{"n":"Marketing & Brand Strategy","d":3,"s":23,"c":3,"k":[{"n":"Brand Development","d":4,"s":4,"c":0,"k":[]},{"n":"Content & Communications","d":4,"s":4,"c":0,"k":[]},{"n":"Visual & Graphic Design","d":4,"s":4,"c":0,"k":[]}]},{"n":"Marketing Operations","d":3,"s":8,"c":0,"k":[]},{"n":"Sales & Account Management","d":3,"s":2,"c":0,"k":[]}]}]},{"n":"Pharmaceutical Manufacturing, CMC & Testing","d":1,"s":954,"c":145,"k":[{"n":"CMC & Manufacturing Advisory","d":2,"s":35,"c":8,"k":[{"n":"CMC Strategy & Development","d":3,"s":24,"c":2,"k":[{"n":"CMC Consulting & Advice","d":4,"s":8,"c":0,"k":[]},{"n":"Product & Drug Development Strategy","d":4,"s":4,"c":0,"k":[]}]},{"n":"Comparability & Change Impact Assessments","d":3,"s":4,"c":0,"k":[]},{"n":"Manufacturing Readiness & Transition Advisory","d":3,"s":1,"c":0,"k":[]},{"n":"Manufacturing Risk Assessment & Mitigation","d":3,"s":1,"c":0,"k":[]},{"n":"Process & Analytical Troubleshooting","d":3,"s":4,"c":0,"k":[]},{"n":"Training & Technical Education","d":3,"s":1,"c":0,"k":[]}]},{"n":"CMC Analytical Development & Testing","d":2,"s":384,"c":53,"k":[{"n":"Analytical Method Validation & Transfer","d":3,"s":47,"c":6,"k":[{"n":"Assay Development","d":4,"s":4,"c":0,"k":[]},{"n":"Chromatography Methods","d":4,"s":3,"c":0,"k":[]},{"n":"Consulting & Expert","d":4,"s":3,"c":0,"k":[]},{"n":"Method Development","d":4,"s":9,"c":0,"k":[]},{"n":"Method Transfer","d":4,"s":3,"c":0,"k":[]},{"n":"Method Validation","d":4,"s":14,"c":0,"k":[]}]},{"n":"Biologics Characterisation","d":3,"s":62,"c":9,"k":[{"n":"Binding Characterisation","d":4,"s":8,"c":0,"k":[]},{"n":"Biophysical Techniques","d":4,"s":4,"c":0,"k":[]},{"n":"Cell Function Assays","d":4,"s":12,"c":0,"k":[]},{"n":"Chromatography Methods","d":4,"s":4,"c":0,"k":[]},{"n":"Mass Spectrometry & Sequencing","d":4,"s":6,"c":0,"k":[]},{"n":"Potency & Titer Testing","d":4,"s":4,"c":0,"k":[]},{"n":"Residuals & Impurity Testing","d":4,"s":7,"c":0,"k":[]},{"n":"Safety & Microbiological Testing","d":4,"s":5,"c":0,"k":[]},{"n":"Viral Vector Testing","d":4,"s":6,"c":0,"k":[]}]},{"n":"Cell Line Quality & Contamination Testing","d":3,"s":6,"c":0,"k":[]},{"n":"Cleaning Validation & Residue Analysis","d":3,"s":10,"c":0,"k":[]},{"n":"Container Closure & Packaging Interaction Testing","d":3,"s":15,"c":0,"k":[]},{"n":"Dissolution & Release Testing","d":3,"s":9,"c":0,"k":[]},{"n":"Extractables & Leachables (E&L) Studies","d":3,"s":14,"c":0,"k":[]},{"n":"Forced Degradation Studies","d":3,"s":5,"c":0,"k":[]},{"n":"Microbiological, Endotoxin & Sterility Testing","d":3,"s":34,"c":3,"k":[{"n":"Endotoxin Testing","d":4,"s":5,"c":0,"k":[]},{"n":"Microbial Limits Testing","d":4,"s":3,"c":0,"k":[]},{"n":"Sterility Testing","d":4,"s":4,"c":0,"k":[]}]},{"n":"Particle Count & Particulate Matter Testing","d":3,"s":16,"c":2,"k":[{"n":"Aerosol Size & Performance Testing","d":4,"s":3,"c":0,"k":[]},{"n":"Particle Size Analysis","d":4,"s":4,"c":0,"k":[]}]},{"n":"Physicochemical Characterisation & Properties","d":3,"s":43,"c":5,"k":[{"n":"Microscopy Techniques","d":4,"s":5,"c":0,"k":[]},{"n":"Physical Properties Testing","d":4,"s":4,"c":0,"k":[]},{"n":"Spectroscopy Techniques","d":4,"s":7,"c":0,"k":[]},{"n":"Thermal Analysis","d":4,"s":7,"c":0,"k":[]},{"n":"Water Content Determination","d":4,"s":4,"c":0,"k":[]}]},{"n":"Raw Material & Finished Product Testing","d":3,"s":27,"c":4,"k":[{"n":"Analytical Services","d":4,"s":4,"c":0,"k":[]},{"n":"Finished Product Testing","d":4,"s":3,"c":0,"k":[]},{"n":"Quality Control & Release Testing","d":4,"s":7,"c":0,"k":[]},{"n":"Raw Material Testing","d":4,"s":4,"c":0,"k":[]}]},{"n":"Reference Standard Characterisations","d":3,"s":8,"c":0,"k":[]},{"n":"Residual Solvent Analysis","d":3,"s":6,"c":0,"k":[]},{"n":"Stability Studies","d":3,"s":34,"c":0,"k":[]},{"n":"Structure, Elemental & Impurity Analysis","d":3,"s":37,"c":7,"k":[{"n":"Chromatography Techniques","d":4,"s":6,"c":0,"k":[]},{"n":"Impurity Identification","d":4,"s":9,"c":0,"k":[]},{"n":"Mass Spectrometry","d":4,"s":4,"c":0,"k":[]},{"n":"Metal & Trace Element Testing","d":4,"s":3,"c":0,"k":[]},{"n":"Organic Content Analysis","d":4,"s":2,"c":0,"k":[]},{"n":"Structural Analysis","d":4,"s":4,"c":0,"k":[]},{"n":"Toxicology & Risk Assessment","d":4,"s":5,"c":0,"k":[]}]},{"n":"Utilities & Pharmaceutical Water Testing","d":3,"s":8,"c":0,"k":[]}]},{"n":"CMC Documentation & Regulatory","d":2,"s":25,"c":6,"k":[{"n":"CMC Change Management & Variation","d":3,"s":3,"c":0,"k":[]},{"n":"CMC Data Gap Analysis & Readiness","d":3,"s":5,"c":0,"k":[]},{"n":"CMC Section Authoring","d":3,"s":5,"c":0,"k":[]},{"n":"DMF / ASMF Preparation & Maintenance","d":3,"s":3,"c":0,"k":[]},{"n":"Module 3 (Quality) Documentation","d":3,"s":8,"c":0,"k":[]},{"n":"Regulatory Responses","d":3,"s":1,"c":0,"k":[]}]},{"n":"Drug Product Manufacturing","d":2,"s":250,"c":30,"k":[{"n":"Aseptic Processing & Sterile Manufacturing","d":3,"s":23,"c":4,"k":[{"n":"Filtration & Homogenization","d":4,"s":3,"c":0,"k":[]},{"n":"Lyophilisation","d":4,"s":3,"c":0,"k":[]},{"n":"Sterile Injectable Manufacturing","d":4,"s":3,"c":0,"k":[]},{"n":"Sterilisation Techniques","d":4,"s":3,"c":0,"k":[]}]},{"n":"Clinical Trial Material Manufacturing","d":3,"s":20,"c":2,"k":[{"n":"Contract Manufacturing","d":4,"s":6,"c":0,"k":[]},{"n":"Phase-Specific Trial Manufacturing","d":4,"s":3,"c":0,"k":[]}]},{"n":"Drug Product Formulation Development","d":3,"s":93,"c":6,"k":[{"n":"Lipid Nanoparticle Formulation","d":4,"s":6,"c":0,"k":[]},{"n":"Lyophilisation & Freeze Drying","d":4,"s":4,"c":0,"k":[]},{"n":"Modified Release Formulations","d":4,"s":7,"c":0,"k":[]},{"n":"Nanoparticle Formulation","d":4,"s":1,"c":0,"k":[]},{"n":"Oral Dosage Form Development","d":4,"s":5,"c":0,"k":[]},{"n":"Topical & Gel Formulations","d":4,"s":3,"c":0,"k":[]}]},{"n":"Fill-Finish Operations","d":3,"s":30,"c":4,"k":[{"n":"Aseptic Filling","d":4,"s":7,"c":0,"k":[]},{"n":"Liquid & Semi-Solid Filling","d":4,"s":5,"c":0,"k":[]},{"n":"Prefilled Syringes","d":4,"s":3,"c":0,"k":[]},{"n":"Sterile Filling","d":4,"s":3,"c":0,"k":[]}]},{"n":"Solid, Semi-Solid & Liquid Dosage","d":3,"s":78,"c":9,"k":[{"n":"Capsule Manufacturing","d":4,"s":8,"c":0,"k":[]},{"n":"Coating","d":4,"s":12,"c":0,"k":[]},{"n":"Granulation Techniques","d":4,"s":6,"c":0,"k":[]},{"n":"High-Potent Manufacturing","d":4,"s":4,"c":0,"k":[]},{"n":"Liquid Formulations","d":4,"s":8,"c":0,"k":[]},{"n":"Oral Solid Dose Manufacturing","d":4,"s":11,"c":0,"k":[]},{"n":"Powder Processing","d":4,"s":7,"c":0,"k":[]},{"n":"Semi-Solid Formulations","d":4,"s":5,"c":0,"k":[]},{"n":"Specialty Dosage Forms","d":4,"s":9,"c":0,"k":[]}]}]},{"n":"Drug Substance Manufacturing","d":2,"s":73,"c":14,"k":[{"n":"Biologicals Manufacturing","d":3,"s":32,"c":5,"k":[{"n":"Antibody & Conjugate Manufacturing","d":4,"s":3,"c":0,"k":[]},{"n":"Large Molecule & Biologics Manufacturing","d":4,"s":3,"c":0,"k":[]},{"n":"Microbial & Fermentation Manufacturing","d":4,"s":3,"c":0,"k":[]},{"n":"Viral Vector & Gene Therapy Manufacturing","d":4,"s":4,"c":0,"k":[]},{"n":"mRNA Manufacturing","d":4,"s":6,"c":0,"k":[]}]},{"n":"Cell Banking & Line Characterisation","d":3,"s":9,"c":0,"k":[]},{"n":"Chemical Synthesis (Small Molecules)","d":3,"s":20,"c":3,"k":[{"n":"API Development & Manufacturing","d":4,"s":3,"c":0,"k":[]},{"n":"Custom Synthesis","d":4,"s":3,"c":0,"k":[]},{"n":"High-Potency Manufacturing","d":4,"s":4,"c":0,"k":[]}]},{"n":"Drug Substance Purification & Isolation","d":3,"s":3,"c":0,"k":[]},{"n":"Drug Substance Stability & Storage","d":3,"s":4,"c":0,"k":[]},{"n":"Intermediate & Starting Material Manufacturing","d":3,"s":4,"c":0,"k":[]}]},{"n":"Packaging & Labelling","d":2,"s":117,"c":17,"k":[{"n":"Clinical Trial Packaging & Labelling","d":3,"s":36,"c":4,"k":[{"n":"Clinical Packaging","d":4,"s":5,"c":0,"k":[]},{"n":"Labelling","d":4,"s":7,"c":0,"k":[]},{"n":"Packaging Design & Development","d":4,"s":3,"c":0,"k":[]},{"n":"Packaging Types","d":4,"s":8,"c":0,"k":[]}]},{"n":"Kit Assembly & Clinical Supply Prep","d":3,"s":26,"c":5,"k":[{"n":"Assembly, Pack & Test","d":4,"s":3,"c":0,"k":[]},{"n":"Cartoning","d":4,"s":3,"c":0,"k":[]},{"n":"Kitting","d":4,"s":5,"c":0,"k":[]},{"n":"Serialization & Track Trace","d":4,"s":3,"c":0,"k":[]},{"n":"Tray Manufacture","d":4,"s":6,"c":0,"k":[]}]},{"n":"Labelling Compliance & Artwork Management","d":3,"s":7,"c":0,"k":[]},{"n":"Primary Packaging","d":3,"s":21,"c":0,"k":[]},{"n":"Secondary Packaging & Over-Labelling","d":3,"s":27,"c":3,"k":[{"n":"Labelling","d":4,"s":3,"c":0,"k":[]},{"n":"Repackaging","d":4,"s":3,"c":0,"k":[]},{"n":"Secondary Packaging","d":4,"s":8,"c":0,"k":[]}]}]},{"n":"Process Development, Tech Transfer & Scale-Up","d":2,"s":70,"c":10,"k":[{"n":"Manufacturing Process Characterisation","d":3,"s":13,"c":0,"k":[]},{"n":"Process Robustness & Control Strategy Development","d":3,"s":6,"c":0,"k":[]},{"n":"Process Route, Proof-of-Concept & Optimisation","d":3,"s":6,"c":0,"k":[]},{"n":"Scale-Up & Scale-Down Model Development","d":3,"s":6,"c":0,"k":[]},{"n":"Technology Transfer (Process & Analytical)","d":3,"s":23,"c":4,"k":[{"n":"Chromatography Techniques","d":4,"s":3,"c":0,"k":[]},{"n":"Manufacturing Transfer","d":4,"s":5,"c":0,"k":[]},{"n":"Technical Support","d":4,"s":4,"c":0,"k":[]},{"n":"Technology Transfer Engineering","d":4,"s":4,"c":0,"k":[]}]},{"n":"Upstream & Downstream Process Development","d":3,"s":16,"c":0,"k":[]}]}]},{"n":"Post-Approval, Market Access & Lifecycle","d":1,"s":425,"c":76,"k":[{"n":"Commercialisation & Partnering Strategy","d":2,"s":77,"c":12,"k":[{"n":"Go-To-Market & Channel Strategy","d":3,"s":9,"c":0,"k":[]},{"n":"Launch Planning & Readiness","d":3,"s":32,"c":6,"k":[{"n":"Business & Marketing Planning","d":4,"s":3,"c":0,"k":[]},{"n":"Commercialisation Support","d":4,"s":7,"c":0,"k":[]},{"n":"Distribution & Deployment","d":4,"s":3,"c":0,"k":[]},{"n":"Launch Execution","d":4,"s":4,"c":0,"k":[]},{"n":"Launch Strategy","d":4,"s":4,"c":0,"k":[]},{"n":"Market Strategy","d":4,"s":6,"c":0,"k":[]}]},{"n":"Licensing & Collaboration Strategy","d":3,"s":5,"c":0,"k":[]},{"n":"Market & Competitive Analysis","d":3,"s":8,"c":0,"k":[]},{"n":"Partner Identification & Evaluation","d":3,"s":20,"c":0,"k":[]},{"n":"Post-Launch Monitoring & Optimisation","d":3,"s":3,"c":0,"k":[]}]},{"n":"Health Economics & Outcomes Research","d":2,"s":70,"c":12,"k":[{"n":"Evidence Generation Plans for Payer Submissions","d":3,"s":1,"c":0,"k":[]},{"n":"HEOR Publication & Dissemination","d":3,"s":6,"c":0,"k":[]},{"n":"Health Economic Model Development","d":3,"s":34,"c":4,"k":[{"n":"Budget Impact Models","d":4,"s":3,"c":0,"k":[]},{"n":"Cost-Effectiveness Models","d":4,"s":5,"c":0,"k":[]},{"n":"Decision Modelling Techniques","d":4,"s":3,"c":0,"k":[]},{"n":"HEOR Value","d":4,"s":11,"c":0,"k":[]}]},{"n":"Patient-Reported Outcomes Strategy & Analysis","d":3,"s":8,"c":0,"k":[]},{"n":"RWE Study Design & Analysis","d":3,"s":21,"c":3,"k":[{"n":"Data Sources","d":4,"s":6,"c":0,"k":[]},{"n":"Health Economics","d":4,"s":3,"c":0,"k":[]},{"n":"Study Types","d":4,"s":3,"c":0,"k":[]}]}]},{"n":"Lifecycle Safety Management","d":2,"s":26,"c":7,"k":[{"n":"Risk Management Plans","d":3,"s":5,"c":0,"k":[]},{"n":"Risk-Benefit Assessment & Documentation","d":3,"s":12,"c":2,"k":[{"n":"Benefit-Risk Evaluations","d":4,"s":3,"c":0,"k":[]},{"n":"Risk Assessments","d":4,"s":3,"c":0,"k":[]}]},{"n":"Safety Change Impact Assessment & Implementation","d":3,"s":1,"c":0,"k":[]},{"n":"Safety Commitments & Post-Authorisation Oversight","d":3,"s":3,"c":0,"k":[]},{"n":"Safety Governance & Planning","d":3,"s":5,"c":0,"k":[]}]},{"n":"Market Access, Pricing, & Reimbursement","d":2,"s":89,"c":14,"k":[{"n":"Access Evidence Planning & Value","d":3,"s":9,"c":0,"k":[]},{"n":"HTA & Reimbursement Submission","d":3,"s":19,"c":2,"k":[{"n":"Committee Submission","d":4,"s":5,"c":0,"k":[]},{"n":"HTA Submission","d":4,"s":3,"c":0,"k":[]}]},{"n":"International Reference Pricing Analysis","d":3,"s":1,"c":0,"k":[]},{"n":"Launch & Lifecycle Pricing Management","d":3,"s":2,"c":0,"k":[]},{"n":"Market Access Strategy Development","d":3,"s":36,"c":5,"k":[{"n":"Access & Reimbursement Submissions","d":4,"s":7,"c":0,"k":[]},{"n":"Market Access Strategy","d":4,"s":8,"c":0,"k":[]},{"n":"Market Assessment & Segmentation","d":4,"s":6,"c":0,"k":[]},{"n":"Pricing & Reimbursement","d":4,"s":3,"c":0,"k":[]},{"n":"Regulatory & Competitive Landscape","d":4,"s":4,"c":0,"k":[]}]},{"n":"Pricing Strategy & Optimisation","d":3,"s":9,"c":0,"k":[]},{"n":"Reimbursement Pathway Assessment","d":3,"s":13,"c":0,"k":[]}]},{"n":"Post-Approval Medical Affairs","d":2,"s":58,"c":7,"k":[{"n":"KOL Engagement & Advisory Board","d":3,"s":11,"c":0,"k":[]},{"n":"Medical Affairs Strategy & Planning","d":3,"s":10,"c":0,"k":[]},{"n":"Medical Information","d":3,"s":16,"c":2,"k":[{"n":"Document Writing","d":4,"s":3,"c":0,"k":[]},{"n":"Medical Information Call Centres","d":4,"s":5,"c":0,"k":[]}]},{"n":"Post-Approval Evidence Generation","d":3,"s":10,"c":0,"k":[]},{"n":"Scientific Exchange & Field Medical","d":3,"s":9,"c":0,"k":[]}]},{"n":"Post-Market Pharmacovigilance","d":2,"s":105,"c":18,"k":[{"n":"ICSR Management","d":3,"s":11,"c":0,"k":[]},{"n":"Periodic Safety Update Reports","d":3,"s":16,"c":2,"k":[{"n":"DSUR Submission","d":4,"s":4,"c":0,"k":[]},{"n":"PSUR Submission","d":4,"s":4,"c":0,"k":[]}]},{"n":"Pharmacovigilance Operations & Oversight","d":3,"s":39,"c":6,"k":[{"n":"Medical Review & Coding","d":4,"s":3,"c":0,"k":[]},{"n":"Pharmacovigilance Support","d":4,"s":16,"c":0,"k":[]},{"n":"Pharmacovigilance Training","d":4,"s":3,"c":0,"k":[]},{"n":"Qualified Person for Pharmacovigilance (QPPV)","d":4,"s":4,"c":0,"k":[]},{"n":"Safety Database Management","d":4,"s":3,"c":0,"k":[]},{"n":"Safety Management Planning","d":4,"s":3,"c":0,"k":[]}]},{"n":"Risk Evaluation & Mitigation Measures","d":3,"s":2,"c":0,"k":[]},{"n":"Signal Detection & Safety Surveillance","d":3,"s":37,"c":5,"k":[{"n":"Literature Surveillance","d":4,"s":4,"c":0,"k":[]},{"n":"Pharmacovigilance","d":4,"s":8,"c":0,"k":[]},{"n":"Post-Market Surveillance","d":4,"s":4,"c":0,"k":[]},{"n":"Safety Reporting","d":4,"s":7,"c":0,"k":[]},{"n":"Signal Detection","d":4,"s":5,"c":0,"k":[]}]}]}]},{"n":"Preclinical","d":1,"s":675,"c":132,"k":[{"n":"Disease Models","d":2,"s":14,"c":4,"k":[{"n":"Disease Model Development & Characterisation","d":3,"s":4,"c":0,"k":[]},{"n":"In Vitro Models","d":3,"s":8,"c":0,"k":[]},{"n":"In Vivo Models","d":3,"s":1,"c":0,"k":[]},{"n":"Patient-Derived Models","d":3,"s":1,"c":0,"k":[]}]},{"n":"Immunology & Immunoassays","d":2,"s":63,"c":12,"k":[{"n":"Antigen-Specific Immune Response Assays","d":3,"s":14,"c":0,"k":[]},{"n":"Cellular Immune Function Assays","d":3,"s":2,"c":0,"k":[]},{"n":"Cytokine & Chemokine Assays","d":3,"s":5,"c":0,"k":[]},{"n":"Immune Cell Phenotyping & Profiling","d":3,"s":12,"c":2,"k":[{"n":"Flow Cytometry","d":4,"s":5,"c":0,"k":[]},{"n":"Immunophenotyping","d":4,"s":3,"c":0,"k":[]}]},{"n":"Ligand-Binding Assays","d":3,"s":30,"c":5,"k":[{"n":"Competition & Binning Assays","d":4,"s":3,"c":0,"k":[]},{"n":"ELISA","d":4,"s":6,"c":0,"k":[]},{"n":"Electrochemiluminescent Assays","d":4,"s":3,"c":0,"k":[]},{"n":"Luminex Assays","d":4,"s":2,"c":0,"k":[]},{"n":"Protein Binding Assays","d":4,"s":3,"c":0,"k":[]}]}]},{"n":"Microbiology & Infectious Disease","d":2,"s":11,"c":9,"k":[{"n":"Antimicrobial & Antiviral Efficacy Testing","d":3,"s":5,"c":0,"k":[]},{"n":"Biosafety Level 3 Studies","d":3,"s":0,"c":0,"k":[]},{"n":"Cell Line Quality & Contamination Testing","d":3,"s":0,"c":0,"k":[]},{"n":"Fungal Infection Models","d":3,"s":0,"c":0,"k":[]},{"n":"Host-Pathogen Interaction Studies","d":3,"s":1,"c":0,"k":[]},{"n":"In Vitro Microbial Growth & Inhibition Assays","d":3,"s":0,"c":0,"k":[]},{"n":"Parasitic Infection Models","d":3,"s":1,"c":0,"k":[]},{"n":"Pathogen Isolation, Culture & Characterisation","d":3,"s":3,"c":0,"k":[]},{"n":"Viral Infection & Replication Models","d":3,"s":1,"c":0,"k":[]}]},{"n":"Molecular Biology","d":2,"s":116,"c":15,"k":[{"n":"Cell Line Engineering & Modification","d":3,"s":25,"c":4,"k":[{"n":"Cell Culture & Testing","d":4,"s":3,"c":0,"k":[]},{"n":"Engineered Immune Cell Manufacturing","d":4,"s":3,"c":0,"k":[]},{"n":"Mammalian Cell Line Development","d":4,"s":4,"c":0,"k":[]},{"n":"Transgenic & Knock-In Mice","d":4,"s":4,"c":0,"k":[]}]},{"n":"Functional Genomics & Gene Perturbation","d":3,"s":14,"c":0,"k":[]},{"n":"Gene Expression Measurement","d":3,"s":22,"c":2,"k":[{"n":"Purity & Homogeneity Testing","d":4,"s":3,"c":0,"k":[]},{"n":"Residual Contaminant Quantitation","d":4,"s":5,"c":0,"k":[]}]},{"n":"Nucleic Acid Extraction & Purification","d":3,"s":5,"c":0,"k":[]},{"n":"Nucleic Acid Manipulation & Cloning","d":3,"s":16,"c":0,"k":[]},{"n":"PCR-Based Assays","d":3,"s":19,"c":2,"k":[{"n":"Genotyping","d":4,"s":7,"c":0,"k":[]},{"n":"PCR Techniques","d":4,"s":3,"c":0,"k":[]}]},{"n":"Research & Functional Assays","d":3,"s":15,"c":0,"k":[]}]},{"n":"Omics & High-Throughput Profiling","d":2,"s":99,"c":18,"k":[{"n":"Epigenomics & Chromatin Profiling","d":3,"s":5,"c":0,"k":[]},{"n":"Genomics & Transcriptomics","d":3,"s":35,"c":5,"k":[{"n":"Quality Control & Analytics","d":4,"s":3,"c":0,"k":[]},{"n":"RNA Sequencing","d":4,"s":5,"c":0,"k":[]},{"n":"Sanger Sequencing","d":4,"s":3,"c":0,"k":[]},{"n":"Single-Cell Sequencing","d":4,"s":2,"c":0,"k":[]},{"n":"Whole Genome & Exome Sequencing","d":4,"s":8,"c":0,"k":[]}]},{"n":"HTS, Discovery & Phenotypic Profiling","d":3,"s":12,"c":0,"k":[]},{"n":"Metabolomics & Lipidomics Profiling","d":3,"s":3,"c":0,"k":[]},{"n":"Proteomics Profiling","d":3,"s":44,"c":8,"k":[{"n":"Mass Spectrometry","d":4,"s":4,"c":0,"k":[]},{"n":"Post-Translational Modification","d":4,"s":6,"c":0,"k":[]},{"n":"Protein Interaction & Identification","d":4,"s":3,"c":0,"k":[]},{"n":"Protein Quantification Methods","d":4,"s":9,"c":0,"k":[]},{"n":"Protein Sequencing","d":4,"s":5,"c":0,"k":[]},{"n":"Protein Structure Analysis","d":4,"s":4,"c":0,"k":[]},{"n":"Sample Type Profiling","d":4,"s":1,"c":0,"k":[]},{"n":"Spectroscopy","d":4,"s":3,"c":0,"k":[]}]}]},{"n":"Pathology, Imaging & Tissue","d":2,"s":32,"c":11,"k":[{"n":"Digital Pathology & Image Analysis","d":3,"s":5,"c":0,"k":[]},{"n":"Histopathology & Morphology Analysis","d":3,"s":5,"c":0,"k":[]},{"n":"Immunohistochemistry (IHC)","d":3,"s":3,"c":0,"k":[]},{"n":"Microscopy & Advanced Imaging","d":3,"s":18,"c":6,"k":[{"n":"Electron Microscopy","d":4,"s":3,"c":0,"k":[]},{"n":"Imaging Core Facilities","d":4,"s":1,"c":0,"k":[]},{"n":"Live Cell Imaging","d":4,"s":1,"c":0,"k":[]},{"n":"Microanalysis & Nanofabrication","d":4,"s":0,"c":0,"k":[]},{"n":"Optical Microscopy","d":4,"s":6,"c":0,"k":[]},{"n":"Ultrasound & Fundus Imaging","d":4,"s":4,"c":0,"k":[]}]},{"n":"Spatial & Tissue Contextual Analysis","d":3,"s":1,"c":0,"k":[]}]},{"n":"Preclinical Pharmacology & Bioanalysis","d":2,"s":103,"c":13,"k":[{"n":"ADME","d":3,"s":22,"c":0,"k":[]},{"n":"Bioanalytical Testing & Quantification","d":3,"s":24,"c":5,"k":[{"n":"Analytical Chemistry","d":4,"s":4,"c":0,"k":[]},{"n":"LC-MS/MS Large Molecule","d":4,"s":3,"c":0,"k":[]},{"n":"LC-MS/MS Small Molecule","d":4,"s":6,"c":0,"k":[]},{"n":"Preclinical Tools & Studies","d":4,"s":4,"c":0,"k":[]},{"n":"Specialised Quantitation","d":4,"s":2,"c":0,"k":[]}]},{"n":"Genetic Toxicology & Mutagenicity Testing","d":3,"s":2,"c":0,"k":[]},{"n":"Hit-To-Lead","d":3,"s":9,"c":0,"k":[]},{"n":"Lead Optimisation","d":3,"s":3,"c":0,"k":[]},{"n":"Pharmacodynamics","d":3,"s":12,"c":0,"k":[]},{"n":"Pharmacokinetics","d":3,"s":16,"c":0,"k":[]},{"n":"Toxicology & Safety Assessment","d":3,"s":15,"c":0,"k":[]}]},{"n":"Research Animal Facility","d":2,"s":17,"c":4,"k":[{"n":"Animal Model Breeding & Cryopreservation","d":3,"s":6,"c":0,"k":[]},{"n":"Animal Model Development & Genetic Engineering","d":3,"s":4,"c":0,"k":[]},{"n":"Animal Welfare, Ethics & Regulatory Compliance","d":3,"s":0,"c":0,"k":[]},{"n":"In Vivo Procedure Support & Tech","d":3,"s":7,"c":0,"k":[]}]},{"n":"Research-Grade Production & Reagents","d":2,"s":166,"c":29,"k":[{"n":"Plasmid, Vector & Nucleic Acid Production (RUO)","d":3,"s":54,"c":10,"k":[{"n":"Analytical & QC","d":4,"s":4,"c":0,"k":[]},{"n":"GMP Manufacturing","d":4,"s":3,"c":0,"k":[]},{"n":"Gene & DNA Synthesis","d":4,"s":4,"c":0,"k":[]},{"n":"Guide RNA & CRISPR Reagents","d":4,"s":8,"c":0,"k":[]},{"n":"LNP Formulation","d":4,"s":3,"c":0,"k":[]},{"n":"Lentiviral Vector & Packaging","d":4,"s":6,"c":0,"k":[]},{"n":"Oligonucleotide Synthesis & Purification","d":4,"s":7,"c":0,"k":[]},{"n":"Plasmid DNA","d":4,"s":4,"c":0,"k":[]},{"n":"RNA Synthesis & Production","d":4,"s":7,"c":0,"k":[]},{"n":"Small Nucleic Acid Drugs","d":4,"s":6,"c":0,"k":[]}]},{"n":"Recombinant Protein Expression & Purification","d":3,"s":50,"c":8,"k":[{"n":"Expression Systems","d":4,"s":7,"c":0,"k":[]},{"n":"Impurity Quantification","d":4,"s":4,"c":0,"k":[]},{"n":"Peptide Library","d":4,"s":4,"c":0,"k":[]},{"n":"Peptide Synthesis","d":4,"s":7,"c":0,"k":[]},{"n":"Protein Characterisation","d":4,"s":5,"c":0,"k":[]},{"n":"Protein Interaction Assays","d":4,"s":6,"c":0,"k":[]},{"n":"Protein Modification Analysis","d":4,"s":6,"c":0,"k":[]},{"n":"Protein Purification","d":4,"s":3,"c":0,"k":[]}]},{"n":"Research-Grade Antibody & Binder Production","d":3,"s":40,"c":6,"k":[{"n":"Antibody Discovery & Development","d":4,"s":6,"c":0,"k":[]},{"n":"Antibody Expression & Manufacture","d":4,"s":3,"c":0,"k":[]},{"n":"Antibody Modification & Conjugation","d":4,"s":8,"c":0,"k":[]},{"n":"Antibody Sequencing & Validation","d":4,"s":3,"c":0,"k":[]},{"n":"Custom Antibody Production","d":4,"s":4,"c":0,"k":[]},{"n":"Polyclonal Antibodies","d":4,"s":2,"c":0,"k":[]}]},{"n":"Research-Grade Culture Media & Supplements","d":3,"s":13,"c":0,"k":[]},{"n":"Standards & Reference Materials","d":3,"s":9,"c":0,"k":[]}]},{"n":"Strategy, Evidence & Documentation","d":2,"s":53,"c":7,"k":[{"n":"Non-Clinical Publications & Reports","d":3,"s":3,"c":0,"k":[]},{"n":"Non-Clinical Strategy & Development Advisory","d":3,"s":35,"c":3,"k":[{"n":"Non-Clinical Development Planning","d":4,"s":7,"c":0,"k":[]},{"n":"Non-Clinical Study Protocols","d":4,"s":3,"c":0,"k":[]},{"n":"R&D Strategy & Planning","d":4,"s":7,"c":0,"k":[]}]},{"n":"Scientific Evidence Synthesis","d":3,"s":0,"c":0,"k":[]},{"n":"Technical Writing (Non-Clinical)","d":3,"s":14,"c":0,"k":[]}]}]},{"n":"Quality Systems, Compliance & Assurance","d":1,"s":306,"c":53,"k":[{"n":"Inspection Readiness & Audit","d":2,"s":77,"c":12,"k":[{"n":"Clinical Inspection Readiness & GCP Audit","d":3,"s":22,"c":2,"k":[{"n":"Inspection Readiness","d":4,"s":5,"c":0,"k":[]},{"n":"Site Audits","d":4,"s":5,"c":0,"k":[]}]},{"n":"Financial & Controls Audit","d":3,"s":5,"c":0,"k":[]},{"n":"Manufacturing Inspection Readiness & GMP Audit","d":3,"s":8,"c":0,"k":[]},{"n":"Pre-clinical Inspection Readiness & GLP Audit","d":3,"s":2,"c":0,"k":[]},{"n":"Regulatory Audit","d":3,"s":32,"c":5,"k":[{"n":"Audit Readiness","d":4,"s":4,"c":0,"k":[]},{"n":"Internal Audits","d":4,"s":6,"c":0,"k":[]},{"n":"Quality Audits","d":4,"s":3,"c":0,"k":[]},{"n":"Regulatory Compliance Audits","d":4,"s":7,"c":0,"k":[]},{"n":"Regulatory Inspection Readiness","d":4,"s":4,"c":0,"k":[]}]}]},{"n":"Quality Assurance (QA) & QMS","d":2,"s":137,"c":23,"k":[{"n":"Clinical Quality Management & QA (GCP)","d":3,"s":30,"c":3,"k":[{"n":"Quality Assurance","d":4,"s":8,"c":0,"k":[]},{"n":"Quality Management Systems","d":4,"s":5,"c":0,"k":[]},{"n":"Regulatory Compliance Audits","d":4,"s":3,"c":0,"k":[]}]},{"n":"Computer System Validation (CSV) & Software QA","d":3,"s":5,"c":0,"k":[]},{"n":"Devices Quality Management & QA","d":3,"s":5,"c":0,"k":[]},{"n":"Distribution & Warehousing Quality Management & QA (GDP/GWP)","d":3,"s":2,"c":0,"k":[]},{"n":"Manufacturing Quality Management & QA (GMP)","d":3,"s":32,"c":5,"k":[{"n":"GMP Compliance & Auditing","d":4,"s":2,"c":0,"k":[]},{"n":"GxP & Manufacturing","d":4,"s":4,"c":0,"k":[]},{"n":"Quality Consulting","d":4,"s":5,"c":0,"k":[]},{"n":"Quality Management Systems","d":4,"s":7,"c":0,"k":[]},{"n":"Release & Lot Management","d":4,"s":4,"c":0,"k":[]}]},{"n":"Pre-clinical Quality Management & QA (GLP)","d":3,"s":7,"c":0,"k":[]},{"n":"QMS Implementation, Certification & Training","d":3,"s":42,"c":7,"k":[{"n":"Audit & Compliance Training","d":4,"s":3,"c":0,"k":[]},{"n":"Certification & Accreditation","d":4,"s":3,"c":0,"k":[]},{"n":"Expert & Consulting","d":4,"s":3,"c":0,"k":[]},{"n":"GMP & Aseptic Training","d":4,"s":9,"c":0,"k":[]},{"n":"ISO Certification & Training","d":4,"s":7,"c":0,"k":[]},{"n":"Quality Management System Implementation","d":4,"s":7,"c":0,"k":[]},{"n":"Regulatory & Standards Training","d":4,"s":6,"c":0,"k":[]}]},{"n":"Supplier & Vendor QA","d":3,"s":11,"c":0,"k":[]}]},{"n":"Quality Risk Management & Compliance","d":2,"s":92,"c":15,"k":[{"n":"Clinical Quality Risk Management & GCP Compliance","d":3,"s":8,"c":0,"k":[]},{"n":"Manufacturing Quality Risk Management & GMP Compliance","d":3,"s":14,"c":2,"k":[{"n":"Biocompatibility","d":4,"s":4,"c":0,"k":[]},{"n":"Exposure Limits Assessment","d":4,"s":3,"c":0,"k":[]}]},{"n":"MedTech Quality Risk Management & Compliance","d":3,"s":1,"c":0,"k":[]},{"n":"Pre-clinical Quality Risk Management & GLP Compliance","d":3,"s":2,"c":0,"k":[]},{"n":"Promotional Materials Compliance & Review","d":3,"s":9,"c":0,"k":[]},{"n":"Regulatory Compliance","d":3,"s":55,"c":7,"k":[{"n":"Compliance Auditing & Consulting","d":4,"s":21,"c":0,"k":[]},{"n":"Computerised Systems Compliance","d":4,"s":10,"c":0,"k":[]},{"n":"Deviation & Non-Conformance","d":4,"s":3,"c":0,"k":[]},{"n":"Pharmaceutical & Medical Regulatory","d":4,"s":4,"c":0,"k":[]},{"n":"Quality Management","d":4,"s":6,"c":0,"k":[]},{"n":"Risk Assessment","d":4,"s":4,"c":0,"k":[]},{"n":"Safety Data Sheets","d":4,"s":3,"c":0,"k":[]}]}]}]},{"n":"Regulatory Affairs","d":1,"s":377,"c":68,"k":[{"n":"Marketing Authorisation Holder & Sponsorship","d":2,"s":18,"c":5,"k":[{"n":"Local Agent & Sponsor-Of-Record","d":3,"s":11,"c":2,"k":[{"n":"Agent for Foreign Companies","d":4,"s":2,"c":0,"k":[]},{"n":"Local Sponsorship","d":4,"s":2,"c":0,"k":[]}]},{"n":"MAH / Sponsor Legal Representation","d":3,"s":1,"c":0,"k":[]},{"n":"Regulatory Responsibility & Compliance","d":3,"s":6,"c":0,"k":[]}]},{"n":"Pre-Submission & Health Authority Interactions","d":2,"s":57,"c":11,"k":[{"n":"Briefing Package Development","d":3,"s":0,"c":0,"k":[]},{"n":"Health Authority Meetings & Representation","d":3,"s":17,"c":2,"k":[{"n":"Meeting Support","d":4,"s":3,"c":0,"k":[]},{"n":"Regulatory Agency Interactions","d":4,"s":5,"c":0,"k":[]}]},{"n":"Post-Meeting Outcomes & Action Tracking","d":3,"s":2,"c":0,"k":[]},{"n":"Pre-IND / Pre-CTA / Scientific Advice Preparation","d":3,"s":28,"c":4,"k":[{"n":"Documentation Prep","d":4,"s":3,"c":0,"k":[]},{"n":"Regulatory Consulting","d":4,"s":2,"c":0,"k":[]},{"n":"Regulatory Designations","d":4,"s":4,"c":0,"k":[]},{"n":"Regulatory Meeting Prep","d":4,"s":10,"c":0,"k":[]}]},{"n":"Regulatory Literature Reviews","d":3,"s":10,"c":0,"k":[]}]},{"n":"Product Registration & Licensing","d":2,"s":58,"c":9,"k":[{"n":"Approval Tracking & Coordination","d":3,"s":5,"c":0,"k":[]},{"n":"Marketing Application Preparation","d":3,"s":24,"c":4,"k":[{"n":"IND & DMF Preparation","d":4,"s":2,"c":0,"k":[]},{"n":"NDA Preparation & Submission","d":4,"s":5,"c":0,"k":[]},{"n":"Regional Marketing Applications","d":4,"s":6,"c":0,"k":[]},{"n":"eCTD Publishing & Submission","d":4,"s":2,"c":0,"k":[]}]},{"n":"National & Regional Licensing","d":3,"s":7,"c":0,"k":[]},{"n":"Product Registration","d":3,"s":19,"c":0,"k":[]},{"n":"Registration Renewal & Maintenance","d":3,"s":3,"c":0,"k":[]}]},{"n":"Regulatory Responses & Deficiency Management","d":2,"s":16,"c":5,"k":[{"n":"Cross-Functional Response Management","d":3,"s":1,"c":0,"k":[]},{"n":"Health Authority Question & Deficiency Responses","d":3,"s":6,"c":0,"k":[]},{"n":"Information Request (IR) Coordination","d":3,"s":0,"c":0,"k":[]},{"n":"Labeling & Documentation Updates","d":3,"s":9,"c":0,"k":[]},{"n":"Regulatory Commitment Tracking & Closure","d":3,"s":0,"c":0,"k":[]}]},{"n":"Regulatory Strategy & Pathway Planning","d":2,"s":118,"c":18,"k":[{"n":"Expedited & Special Designations Management","d":3,"s":8,"c":0,"k":[]},{"n":"Regulatory Pathway & Jurisdictional Mapping","d":3,"s":0,"c":0,"k":[]},{"n":"Regulatory Risk Assessment & Mitigation","d":3,"s":14,"c":2,"k":[{"n":"Risk Assessment","d":4,"s":4,"c":0,"k":[]},{"n":"Risk Mitigation Planning","d":4,"s":4,"c":0,"k":[]}]},{"n":"Regulatory Strategy Development & Roadmap","d":3,"s":87,"c":9,"k":[{"n":"Development & Clinical Strategy","d":4,"s":9,"c":0,"k":[]},{"n":"Gap Analysis","d":4,"s":7,"c":0,"k":[]},{"n":"Geographic Regulatory Strategies","d":4,"s":7,"c":0,"k":[]},{"n":"Medical Device Regulatory Strategy","d":4,"s":3,"c":0,"k":[]},{"n":"Regulatory Affairs Support","d":4,"s":8,"c":0,"k":[]},{"n":"Regulatory Consulting & Advice","d":4,"s":33,"c":0,"k":[]},{"n":"Regulatory Integration & Commercialisation","d":4,"s":2,"c":0,"k":[]},{"n":"Regulatory Pathway Support","d":4,"s":6,"c":0,"k":[]},{"n":"Therapeutic Area Strategies","d":4,"s":3,"c":0,"k":[]}]},{"n":"Target Product Profile (TPP) Alignment","d":3,"s":8,"c":2,"k":[{"n":"TPP Development","d":4,"s":2,"c":0,"k":[]},{"n":"TPP Establishment","d":4,"s":3,"c":0,"k":[]}]}]},{"n":"Regulatory Submissions","d":2,"s":93,"c":8,"k":[{"n":"Clinical Trial Application Preparation & Submission","d":3,"s":18,"c":0,"k":[]},{"n":"Ethics & Competent Authority","d":3,"s":18,"c":0,"k":[]},{"n":"IND / IND-Like Submission","d":3,"s":42,"c":3,"k":[{"n":"IND Application","d":4,"s":8,"c":0,"k":[]},{"n":"Regulatory & Regional Submissions","d":4,"s":15,"c":0,"k":[]},{"n":"Regulatory Writing & Dossier Compilation","d":4,"s":4,"c":0,"k":[]}]},{"n":"Protocol & Investigator Brochure Review","d":3,"s":7,"c":0,"k":[]},{"n":"Regulatory Tracking & Submission Lifecycle","d":3,"s":5,"c":0,"k":[]}]},{"n":"Variations, Amendments & Post-Approval Maintenance","d":2,"s":16,"c":5,"k":[{"n":"Lifecycle Maintenance Submissions","d":3,"s":7,"c":0,"k":[]},{"n":"Post-Approval Change Classification & Strategy","d":3,"s":3,"c":0,"k":[]},{"n":"Regulatory Impact Assessment for Manufacturing Changes","d":3,"s":1,"c":0,"k":[]},{"n":"Regulatory Intelligence-Driven Change Planning","d":3,"s":2,"c":0,"k":[]},{"n":"Variation & Amendment Dossier Prep","d":3,"s":3,"c":0,"k":[]}]}]},{"n":"Supply Chain & Logistics","d":1,"s":163,"c":50,"k":[{"n":"Cold Chain & Temperature-Controlled Logistics","d":2,"s":33,"c":6,"k":[{"n":"Cold Chain Monitoring, Risk & Assurance","d":3,"s":0,"c":0,"k":[]},{"n":"Temp-Controlled Transport & Shipping","d":3,"s":31,"c":4,"k":[{"n":"Clinical Trial Distribution","d":4,"s":3,"c":0,"k":[]},{"n":"Cold Chain Management","d":4,"s":6,"c":0,"k":[]},{"n":"Temperature-Controlled Logistics","d":4,"s":5,"c":0,"k":[]},{"n":"Temperature-Controlled Packaging","d":4,"s":3,"c":0,"k":[]}]}]},{"n":"Import, Export & Customs","d":2,"s":13,"c":5,"k":[{"n":"Cross-Border Trade Compliance","d":3,"s":4,"c":0,"k":[]},{"n":"Customs Clearance & Brokerage","d":3,"s":2,"c":0,"k":[]},{"n":"Import & Export Documentation","d":3,"s":1,"c":0,"k":[]},{"n":"Regulatory & Permit Coordination","d":3,"s":6,"c":0,"k":[]},{"n":"Tariff Classification & Duty Assessment","d":3,"s":0,"c":0,"k":[]}]},{"n":"Packaging, Labelling & Shipping (Non-GMP)","d":2,"s":16,"c":5,"k":[{"n":"Non-GMP Packaging & Repackaging","d":3,"s":6,"c":0,"k":[]},{"n":"Packaging Qualification for Transport","d":3,"s":0,"c":0,"k":[]},{"n":"Sample & Material Shipment","d":3,"s":3,"c":0,"k":[]},{"n":"Shipping Documentation & Dispatch","d":3,"s":6,"c":0,"k":[]},{"n":"Shipping Label Preparation & Compliance","d":3,"s":1,"c":0,"k":[]}]},{"n":"Reverse Logistics, Returns & Destruction","d":2,"s":18,"c":5,"k":[{"n":"Destruction Certification & Reporting","d":3,"s":0,"c":0,"k":[]},{"n":"Expired & Recalled Goods Handling","d":3,"s":2,"c":0,"k":[]},{"n":"Product & Sample Returns Management","d":3,"s":6,"c":0,"k":[]},{"n":"Reverse Logistics Coordination","d":3,"s":3,"c":0,"k":[]},{"n":"Secure Destruction & Disposal","d":3,"s":7,"c":0,"k":[]}]},{"n":"Supply Chain Planning & Inventory","d":2,"s":20,"c":7,"k":[{"n":"Comparator Sourcing & Procurement","d":3,"s":9,"c":0,"k":[]},{"n":"Demand Planning & Forecasting","d":3,"s":0,"c":0,"k":[]},{"n":"Inventory Optimisation & Stock Management","d":3,"s":2,"c":0,"k":[]},{"n":"Inventory Performance Reporting & Analytics","d":3,"s":0,"c":0,"k":[]},{"n":"Logistics Network & Distribution","d":3,"s":3,"c":0,"k":[]},{"n":"Supply Chain Risk Assessment & Mitigation","d":3,"s":1,"c":0,"k":[]},{"n":"Supply Planning & Capacity Modelling","d":3,"s":3,"c":0,"k":[]}]},{"n":"Supply Storage & Distribution","d":2,"s":46,"c":10,"k":[{"n":"Controlled Environment Storage","d":3,"s":33,"c":5,"k":[{"n":"Clinical Trial Storage & Logistics","d":4,"s":8,"c":0,"k":[]},{"n":"Cold Chain Storage","d":4,"s":3,"c":0,"k":[]},{"n":"Frozen & Ultra Low Temp Storage","d":4,"s":3,"c":0,"k":[]},{"n":"Pharmaceutical Storage & Distribution","d":4,"s":7,"c":0,"k":[]},{"n":"Scheduled Drug Storage & Compliance","d":4,"s":3,"c":0,"k":[]}]},{"n":"Inventory Receipt & Dispatch","d":3,"s":2,"c":0,"k":[]},{"n":"Pick, Pack & Distribution","d":3,"s":2,"c":0,"k":[]},{"n":"Stock Reconciliation & Reporting","d":3,"s":1,"c":0,"k":[]},{"n":"Warehousing & Short-Term Storage","d":3,"s":6,"c":0,"k":[]}]},{"n":"Transport & Courier Logistics","d":2,"s":17,"c":5,"k":[{"n":"Chain-Of-Custody Tracking","d":3,"s":0,"c":0,"k":[]},{"n":"Domestic Courier & Freight","d":3,"s":0,"c":0,"k":[]},{"n":"Hazardous Materials Transport (Non-GMP)","d":3,"s":2,"c":0,"k":[]},{"n":"International Freight Forwarding","d":3,"s":4,"c":0,"k":[]},{"n":"Time-Critical & Same-Day Delivery","d":3,"s":9,"c":0,"k":[]}]}]}];
+
+// ========= RENDER =========
+const treeEl = document.getElementById('tree');
+const allNodes = []; // flat array of {el, name, lower, ancestors[]}
+
+function renderNode(data, depth, l1Name, ancestorEls) {
+  const node = document.createElement('div');
+  node.className = 'node';
+  node.dataset.depth = depth;
+  node.dataset.name = data.n;
+
+  const row = document.createElement('div');
+  row.className = 'row' + (data.k.length === 0 ? ' is-leaf' : '');
+
+  const rowContent = document.createElement('div');
+  rowContent.className = 'row-content';
+
+  // Toggle indicator
+  const toggle = document.createElement('span');
+  toggle.className = 'toggle';
+  toggle.textContent = data.k.length > 0 ? '▶' : '·';
+  rowContent.appendChild(toggle);
+
+  // L1 colour bar (only on top-level rows for visual orientation; subtle line on inner rows)
+  if (depth === 1) {
+    const bar = document.createElement('span');
+    bar.className = 'l1-bar';
+    bar.style.background = L1_COLORS[data.n] || '#08A2C0';
+    rowContent.appendChild(bar);
+  }
+
+  // Label
+  const label = document.createElement('span');
+  label.className = 'label';
+  label.textContent = data.n;
+  rowContent.appendChild(label);
+
+  // Meta — child count and/or service count
+  const meta = document.createElement('span');
+  meta.className = 'meta';
+  if (data.c > 0) {
+    const pill = document.createElement('span');
+    pill.className = 'pill';
+    pill.textContent = data.c + ' ' + (data.c === 1 ? 'sub-cat' : 'sub-cats');
+    meta.appendChild(pill);
+  }
+  rowContent.appendChild(meta);
+
+  row.appendChild(rowContent);
+
+  // Click-to-toggle (only if has children)
+  if (data.k.length > 0) {
+    row.addEventListener('click', (e) => {
+      e.stopPropagation();
+      node.classList.toggle('is-open');
+      row.classList.toggle('is-open');
+    });
+  }
+  node.appendChild(row);
+
+  // Register node for search
+  const nodeAncestors = ancestorEls.slice();
+  allNodes.push({
+    el: node,
+    rowEl: row,
+    labelEl: label,
+    name: data.n,
+    lower: data.n.toLowerCase(),
+    depth: depth,
+    l1: l1Name,
+    ancestors: nodeAncestors,
+  });
+
+  // Children
+  if (data.k.length > 0) {
+    const children = document.createElement('div');
+    children.className = 'children';
+    const newAncestors = nodeAncestors.concat([node]);
+    data.k.forEach(child => {
+      children.appendChild(renderNode(child, depth + 1, l1Name, newAncestors));
+    });
+    node.appendChild(children);
+  }
+
+  return node;
+}
+
+TREE_DATA.forEach(root => {
+  treeEl.appendChild(renderNode(root, 1, root.n, []));
+});
+
+// ========= L1 JUMP NAVIGATION =========
+const jumpsEl = document.getElementById('l1Jumps');
+TREE_DATA.forEach(root => {
+  const chip = document.createElement('button');
+  chip.type = 'button';
+  chip.className = 'jump-chip';
+  const dot = document.createElement('span');
+  dot.className = 'dot';
+  dot.style.background = L1_COLORS[root.n] || '#08A2C0';
+  chip.appendChild(dot);
+  chip.appendChild(document.createTextNode(root.n));
+  chip.addEventListener('click', () => {
+    const target = allNodes.find(n => n.depth === 1 && n.name === root.n);
+    if (target) {
+      // Open that L1 if collapsed
+      target.el.classList.add('is-open');
+      target.rowEl.classList.add('is-open');
+      // Scroll to it
+      const headerH = document.querySelector('.header').offsetHeight;
+      const top = target.el.getBoundingClientRect().top + window.pageYOffset - headerH - 16;
+      window.scrollTo({ top, behavior: 'smooth' });
+    }
+  });
+  jumpsEl.appendChild(chip);
+});
+
+// ========= EXPAND/COLLAPSE ALL =========
+document.getElementById('expandAll').addEventListener('click', () => {
+  document.querySelectorAll('.node').forEach(n => n.classList.add('is-open'));
+  document.querySelectorAll('.row').forEach(r => {
+    if (!r.classList.contains('is-leaf')) r.classList.add('is-open');
+  });
+});
+document.getElementById('collapseAll').addEventListener('click', () => {
+  document.querySelectorAll('.node').forEach(n => n.classList.remove('is-open'));
+  document.querySelectorAll('.row').forEach(r => r.classList.remove('is-open'));
+});
+
+// ========= INIT =========
+// Open all L1s by default? No — start collapsed for a clean overview.
+// User can click any L1 or use "Expand all".
+</script>
+</body>
+</html>
